@@ -2,15 +2,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { evaluateWebtoon, QAScore } from './evaluator';
 import { generatePanel } from '@/lib/ai/image-generator';
 import { addSpeechBubbles } from '@/lib/image/speech-bubbles';
-import { uploadToS3 } from '@/lib/s3';
+import { uploadToS3, downloadFromS3 } from '@/lib/s3';
 import { prisma } from '@/lib/db';
 import path from 'path';
-import fs from 'fs/promises';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
-const TARGET_SCORE = 9; // 9점 이상이면 통과
+const TARGET_SCORE = 7;
 const MAX_ITERATIONS = 3; // 최대 3번 반복
 
 export interface QAResult {
@@ -43,14 +41,13 @@ export async function runQALoop(
   const episode = project.episodes[0];
   if (!episode) throw new Error('No episode found');
 
-  const projectDir = path.join(UPLOADS_DIR, 'projects', projectId);
   const results: QAResult[] = [];
 
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
     onProgress?.(`QA 평가 ${iter + 1}회차 진행 중...`);
 
     // 1. 평가
-    const score = await evaluateWebtoon(projectDir);
+    const score = await evaluateWebtoon(projectId, episode.id);
     onProgress?.(`평가 완료: ${score.overall}/10 | 캐릭터 ${score.characterConsistency} | 스타일 ${score.artStyle} | 텍스트없음 ${score.noTextInImages} | 말풍선 ${score.speechBubbles} | 흐름 ${score.storyFlow} | 배경 ${score.backgroundQuality}`);
 
     if (score.overall >= TARGET_SCORE) {
@@ -68,8 +65,10 @@ export async function runQALoop(
     for (const char of project.characters) {
       if (char.referenceSheet) {
         try {
-          const sheetPath = path.join(process.cwd(), 'public', char.referenceSheet);
-          const buffer = await fs.readFile(sheetPath);
+          const key = char.referenceSheet.startsWith('/uploads/')
+            ? char.referenceSheet.slice('/uploads/'.length)
+            : char.referenceSheet.replace(/^\//, '');
+          const buffer = await downloadFromS3(key);
           characterRefBuffers.push(buffer);
         } catch { /* skip */ }
       }
@@ -129,7 +128,7 @@ export async function runQALoop(
 
   // 최종 평가
   if (results.length > 0 && results[results.length - 1].score.overall < TARGET_SCORE) {
-    const finalScore = await evaluateWebtoon(projectDir);
+    const finalScore = await evaluateWebtoon(projectId, episode.id);
     onProgress?.(`최종 점수: ${finalScore.overall}/10`);
     results.push({ iteration: results.length + 1, score: finalScore, improved: false, regeneratedPanels: [] });
   }

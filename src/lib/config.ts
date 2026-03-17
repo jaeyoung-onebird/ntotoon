@@ -25,7 +25,8 @@ export const config = {
     claudeCostUSD: parseFloat(process.env.CLAUDE_COST_USD || '0.10'),
   },
   qa: {
-    passScore: parseInt(process.env.QA_PASS_SCORE || '9'),
-    maxRetries: parseInt(process.env.QA_MAX_RETRIES || '3'),
+    passScore: parseInt(process.env.QA_PASS_SCORE || '7'),
+    maxRetries: parseInt(process.env.QA_MAX_RETRIES || '2'),
+    goldenThreshold: parseInt(process.env.QA_GOLDEN_THRESHOLD || '8'), // golden_images 수집 기준
   },
 } as const;

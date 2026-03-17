@@ -2,14 +2,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import { evaluateWebtoon, QAScore } from './evaluator';
 import { generatePanel } from '@/lib/ai/image-generator';
 import { addSpeechBubbles } from '@/lib/image/speech-bubbles';
-import { uploadToS3 } from '@/lib/s3';
+import { uploadToS3, downloadFromS3 } from '@/lib/s3';
 import { prisma } from '@/lib/db';
 import path from 'path';
-import fs from 'fs/promises';
 import { captureException } from '@/lib/error-reporter';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 import { config } from '@/lib/config';
 
 const PASS_SCORE = config.qa.passScore;
@@ -26,14 +24,12 @@ export async function runAutoQA(
   episodeId: string,
   onProgress?: (msg: string) => void
 ): Promise<QAScore | null> {
-  const projectDir = path.join(UPLOADS_DIR, 'projects', projectId);
-
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     onProgress?.(`QA 평가 ${attempt + 1}회차...`);
 
     let score: QAScore;
     try {
-      score = await evaluateWebtoon(projectDir);
+      score = await evaluateWebtoon(projectId, episodeId);
     } catch (error) {
       captureException(error, { tags: { projectId, episodeId, source: 'auto-qa' } });
       onProgress?.(`QA 평가 실패: ${error}`);
@@ -150,8 +146,8 @@ async function learnFromSuccess(score: QAScore, projectId?: string, episodeId?: 
     });
   }
 
-  // 고득점 이미지 수집 (8점 이상)
-  if (score.overall >= 8 && episodeId) {
+  // 고득점 이미지 수집 (golden threshold 이상)
+  if (score.overall >= config.qa.goldenThreshold && episodeId) {
     await collectGoldenImages(projectId || '', episodeId, score);
   }
 }
@@ -230,8 +226,10 @@ async function regenerateBadPanels(
   for (const char of characters) {
     if (char.referenceSheet) {
       try {
-        const sheetPath = path.join(process.cwd(), 'public', char.referenceSheet);
-        const buffer = await fs.readFile(sheetPath);
+        const key = char.referenceSheet.startsWith('/uploads/')
+          ? char.referenceSheet.slice('/uploads/'.length)
+          : char.referenceSheet.replace(/^\//, '');
+        const buffer = await downloadFromS3(key);
         refBuffers.push(buffer);
       } catch { /* skip */ }
     }

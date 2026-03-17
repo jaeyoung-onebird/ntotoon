@@ -14,7 +14,6 @@ import { evaluateWebtoon } from '../src/lib/qa/evaluator';
 import path from 'path';
 
 const prisma = new PrismaClient();
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 async function main() {
   const args = process.argv.slice(2);
@@ -37,13 +36,18 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`\n=== QA 평가: "${project.title}" (${project.id}) ===\n`);
+  // 최신 에피소드 찾기
+  const episode = await prisma.episode.findFirst({
+    where: { projectId: project.id },
+    orderBy: { number: 'desc' },
+  });
+  if (!episode) { console.error('에피소드 없음'); process.exit(1); }
 
-  const projectDir = path.join(UPLOADS_DIR, 'projects', project.id);
+  console.log(`\n=== QA 평가: "${project.title}" (${project.id}) ===\n`);
 
   // 평가
   console.log('평가 중...');
-  const score = await evaluateWebtoon(projectDir);
+  const score = await evaluateWebtoon(project.id, episode.id);
 
   console.log('\n📊 평가 결과:');
   console.log(`  전체 점수:       ${formatScore(score.overall)}`);
