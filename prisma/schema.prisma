@@ -70,7 +70,8 @@ model Project {
   title       String
   novelText   String        @map("novel_text")
   status      ProjectStatus @default(DRAFT)
-  style       String        @default("manhwa")
+  style       String        @default("drama")   // 스타일 프리셋 키
+  styleRefs   Json?         @map("style_refs")  // 커스텀 레퍼런스 이미지 URL 배열
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
   user        User          @relation(fields: [userId], references: [id])

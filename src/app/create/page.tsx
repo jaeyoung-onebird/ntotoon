@@ -1,22 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { STYLE_PRESETS } from '@/lib/styles';
 
-export default function Home() {
+export default function CreatePage() {
   const router = useRouter();
   const [title, setTitle] = useState('');
   const [novelText, setNovelText] = useState('');
+  const [selectedStyle, setSelectedStyle] = useState('drama');
+  const [customRefs, setCustomRefs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanding, setExpanding] = useState(false);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExpand = async () => {
     if (!novelText.trim()) return;
     setExpanding(true);
     try {
-      // 아직 프로젝트가 없으니 임시로 expand API를 빈 프로젝트 ID로 호출
-      // 프로젝트 없이도 살붙이기 가능하도록 별도 API 사용
       const res = await fetch('/api/expand', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -32,6 +34,17 @@ export default function Home() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const images = files.filter(f => f.type.startsWith('image/')).slice(0, 3);
+    setCustomRefs(prev => [...prev, ...images].slice(0, 3));
+    e.target.value = '';
+  };
+
+  const removeRef = (i: number) => {
+    setCustomRefs(prev => prev.filter((_, idx) => idx !== i));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!novelText.trim()) return;
@@ -40,10 +53,27 @@ export default function Home() {
     setError('');
 
     try {
+      // 커스텀 레퍼런스 이미지 업로드
+      let styleRefUrls: string[] = [];
+      if (customRefs.length > 0) {
+        const formData = new FormData();
+        customRefs.forEach(f => formData.append('files', f));
+        const uploadRes = await fetch('/api/style-refs/upload', { method: 'POST', body: formData });
+        if (uploadRes.ok) {
+          const { urls } = await uploadRes.json();
+          styleRefUrls = urls;
+        }
+      }
+
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title || '제목 없음', novelText: novelText.trim() }),
+        body: JSON.stringify({
+          title: title || '제목 없음',
+          novelText: novelText.trim(),
+          style: selectedStyle,
+          styleRefs: styleRefUrls,
+        }),
       });
       if (!res.ok) throw new Error('프로젝트 생성 실패');
       const project = await res.json();
@@ -75,14 +105,13 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-7">
+        {/* 제목 */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             제목 <span className="text-gray-400 font-normal">(선택)</span>
           </label>
           <input
-            id="title"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -91,25 +120,101 @@ export default function Home() {
           />
         </div>
 
+        {/* 그림체 선택 */}
         <div>
-          <label htmlFor="novel" className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-gray-700 mb-3">
+            그림체 선택
+          </label>
+          <div className="grid grid-cols-4 gap-2">
+            {STYLE_PRESETS.map((style) => (
+              <button
+                key={style.key}
+                type="button"
+                onClick={() => setSelectedStyle(style.key)}
+                className={`p-3 rounded-xl border-2 text-left transition-all
+                  ${selectedStyle === style.key
+                    ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                    : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/50'
+                  }`}
+              >
+                <div className="text-2xl mb-1">{style.emoji}</div>
+                <div className="text-sm font-semibold text-gray-800">{style.label}</div>
+                <div className="text-[11px] text-gray-400 mt-0.5 leading-tight">{style.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 커스텀 스타일 레퍼런스 */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm font-medium text-gray-700">
+              내 그림체 레퍼런스 <span className="text-gray-400 font-normal">(선택 · 최대 3장)</span>
+            </label>
+            {customRefs.length > 0 && (
+              <span className="text-xs text-blue-600 font-medium">{customRefs.length}/3 업로드됨</span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400 mb-3">
+            원하는 그림체의 샘플 이미지를 올리면 AI가 그 스타일로 생성합니다. 선택 안 하면 위 프리셋을 사용합니다.
+          </p>
+
+          <div className="flex gap-2 flex-wrap">
+            {customRefs.map((file, i) => (
+              <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border-2 border-blue-200 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={URL.createObjectURL(file)}
+                  alt={`ref ${i + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeRef(i)}
+                  className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-lg"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+
+            {customRefs.length < 3 && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-400 hover:bg-blue-50 transition-all flex flex-col items-center justify-center text-gray-400 hover:text-blue-500"
+              >
+                <span className="text-2xl">+</span>
+                <span className="text-[10px] mt-0.5">이미지</span>
+              </button>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+          />
+        </div>
+
+        {/* 소설 텍스트 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
             소설 텍스트
           </label>
           <textarea
-            id="novel"
             value={novelText}
             onChange={(e) => setNovelText(e.target.value)}
             placeholder={`여기에 소설 텍스트를 붙여넣으세요...\n\n예시:\n민수는 카페 창가에 앉아 커피를 마시고 있었다.\n문이 열리며 수진이 들어왔다.\n"오랜만이야," 수진이 미소를 지으며 말했다.`}
-            rows={14}
+            rows={12}
             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all resize-y text-gray-800 leading-relaxed"
           />
           <div className="flex justify-between mt-1.5">
-            <p className="text-xs text-gray-400">
-              {novelText.length}자 입력됨
-            </p>
-            <p className="text-xs text-gray-400">
-              100자 이상 권장
-            </p>
+            <p className="text-xs text-gray-400">{novelText.length}자 입력됨</p>
+            <p className="text-xs text-gray-400">100자 이상 권장</p>
           </div>
         </div>
 

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, novelText, style } = body;
+    const { title, novelText, style, styleRefs } = body;
 
     if (!title || !novelText) {
       return NextResponse.json(
@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         novelText,
-        style: style || 'manhwa',
+        style: style || 'drama',
+        styleRefs: styleRefs ?? [],
         userId: (session.user as { id: string }).id,
       },
     });

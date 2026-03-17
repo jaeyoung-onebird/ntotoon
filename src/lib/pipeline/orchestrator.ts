@@ -1,4 +1,5 @@
 import { analyzeText } from '@/lib/ai/text-analyzer';
+import { getStylePreset } from '@/lib/styles';
 import { buildCharacterSheetPrompt, buildPanelPromptWithLearning } from '@/lib/ai/prompt-builder';
 import { generateCharacterSheet, generatePanel } from '@/lib/ai/image-generator';
 import { getStyleReferenceBuffers } from '@/lib/ai/style-references';
@@ -26,7 +27,11 @@ export async function runPipeline(
     where: { id: projectId },
   });
 
-  // 크레딧은 텍스트 분석 후 실제 패널/캐릭터 수로 정확히 차감
+  const styleKey = project.style || 'drama';
+  const stylePreset = getStylePreset(styleKey);
+  // 프로젝트 커스텀 스타일 레퍼런스 (작가가 직접 업로드한 이미지)
+  const customStyleUrls = (project.styleRefs as string[] | null) ?? [];
+
   let episodeId: string | null = null;
   try {
     // Step 1: Analyze text (이전 에피소드 컨텍스트 포함)
@@ -187,7 +192,7 @@ export async function runPipeline(
         message: `캐릭터 시트 생성 중: ${char.name} (${charIndex}/${charsNeedingSheet.length})`,
       });
 
-      const prompt = buildCharacterSheetPrompt(charData);
+      const prompt = buildCharacterSheetPrompt(charData, styleKey);
       const imageBuffer = await generateCharacterSheet(prompt);
 
       const s3Key = `projects/${projectId}/characters/${char.name}/sheet.png`;
@@ -214,12 +219,32 @@ export async function runPipeline(
     const panelRecords: Array<{ id: string; buffer: Buffer; dialogues: PanelData['dialogues'] }> = [];
     const BATCH_SIZE = 5;
 
-    // 스타일 레퍼런스 로드 (golden_images에서 고득점 패널)
-    const stylePanelRefs = await getStyleReferenceBuffers('panel');
-    const styleBgRefs = await getStyleReferenceBuffers('background');
-    if (stylePanelRefs.length > 0) {
-      onProgress({ step: 'panels', progress: 30, message: `스타일 레퍼런스 ${stylePanelRefs.length}개 로드됨 (빅데이터 학습 적용)` });
+    // 스타일 레퍼런스 로드
+    // 1순위: 작가가 직접 업로드한 커스텀 레퍼런스
+    // 2순위: golden_images에서 같은 스타일 키의 고득점 패널
+    let stylePanelRefs: Buffer[] = [];
+    let styleBgRefs: Buffer[] = [];
+
+    if (customStyleUrls.length > 0) {
+      onProgress({ step: 'panels', progress: 30, message: `커스텀 스타일 레퍼런스 ${customStyleUrls.length}개 적용 중...` });
+      for (const url of customStyleUrls.slice(0, 3)) {
+        try {
+          const { downloadFromS3 } = await import('@/lib/s3');
+          const key = url.startsWith('/') ? url.slice(1) : url;
+          const buf = await downloadFromS3(key);
+          stylePanelRefs.push(buf);
+          styleBgRefs.push(buf);
+        } catch { /* skip */ }
+      }
+    } else {
+      stylePanelRefs = await getStyleReferenceBuffers('panel');
+      styleBgRefs = await getStyleReferenceBuffers('background');
+      if (stylePanelRefs.length > 0) {
+        onProgress({ step: 'panels', progress: 30, message: `스타일 레퍼런스 ${stylePanelRefs.length}개 로드됨` });
+      }
     }
+
+    onProgress({ step: 'panels', progress: 30, message: `스타일: ${stylePreset.emoji} ${stylePreset.label}` });
 
     for (let batchStart = 0; batchStart < analysis.panels.length; batchStart += BATCH_SIZE) {
       const batch = analysis.panels.slice(batchStart, batchStart + BATCH_SIZE);
@@ -234,7 +259,7 @@ export async function runPipeline(
       const batchResults = await Promise.all(
         batch.map(async (panel, batchIdx) => {
           const i = batchStart + batchIdx;
-          const prompt = await buildPanelPromptWithLearning(panel, characterMap, locationMap);
+          const prompt = await buildPanelPromptWithLearning(panel, characterMap, locationMap, styleKey);
           const hasCharacters = panel.characters_present.length > 0;
           // Include both full character sheet and cropped face as references
           // 레퍼런스 전략: 얼굴 크롭 우선 (얼굴이 더 명확), 없으면 시트 사용

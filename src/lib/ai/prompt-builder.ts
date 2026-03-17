@@ -1,8 +1,6 @@
 import type { PanelData, CharacterData, LocationData } from '@/types/scene';
 import { prisma } from '@/lib/db';
-
-// 핵심 스타일 — 짧고 명확하게 (긴 prefix는 중요 지시를 희석)
-const STYLE_PREFIX = `Korean webtoon panel (manhwa). Clean black outlines, cel-shading, vibrant colors. Style: Lookism / Weak Hero — clean designs, natural expressions, emotionally expressive. Professional digital art.`;
+import { getStylePreset } from '@/lib/styles';
 
 const NO_TEXT_SUFFIX = `NO TEXT: Zero letters, numbers, words, signs, labels, watermarks in any language. Signs/labels must be blank or illegible.`;
 
@@ -10,7 +8,8 @@ const NO_TEXT_SUFFIX = `NO TEXT: Zero letters, numbers, words, signs, labels, wa
 // Character sheet
 // ---------------------------------------------------------------------------
 
-export function buildCharacterSheetPrompt(character: CharacterData): string {
+export function buildCharacterSheetPrompt(character: CharacterData, styleKey = 'drama'): string {
+  const style = getStylePreset(styleKey);
   const isFemale = character.appearance.includes('1girl') || character.appearance.includes('woman');
   const genderLine = isFemale
     ? 'FEMALE character. Draw as a woman.'
@@ -23,7 +22,9 @@ Character: ${character.appearance}
 
 ${genderLine}
 
-Style: Korean manhwa, clean lineart, cel shading, consistent proportions across all views.
+Art style: ${style.stylePrompt}
+Color tone: ${style.colorTone}
+Consistent proportions and style across all views.
 
 ${NO_TEXT_SUFFIX}`;
 }
@@ -44,8 +45,10 @@ const CAMERA: Record<string, string> = {
 export function buildPanelPrompt(
   panel: PanelData,
   characters: Map<string, CharacterData>,
-  locations?: Map<string, LocationData>
+  locations?: Map<string, LocationData>,
+  styleKey = 'drama',
 ): string {
+  const style = getStylePreset(styleKey);
   const camera = CAMERA[panel.camera_angle] || 'MEDIUM SHOT.';
 
   // 캐릭터 (간결하게: 외형 태그 + 감정 + 행동)
@@ -77,7 +80,7 @@ export function buildPanelPrompt(
 
   const mood = panel.mood ? `Mood: ${panel.mood}.` : '';
 
-  return `${STYLE_PREFIX}
+  return `${style.stylePrompt} Color tone: ${style.colorTone}.
 
 ${camera}
 
@@ -119,9 +122,10 @@ export async function getLearnedRules(): Promise<string> {
 export async function buildPanelPromptWithLearning(
   panel: PanelData,
   characters: Map<string, CharacterData>,
-  locations?: Map<string, LocationData>
+  locations?: Map<string, LocationData>,
+  styleKey = 'drama',
 ): Promise<string> {
-  const basePrompt = buildPanelPrompt(panel, characters, locations);
+  const basePrompt = buildPanelPrompt(panel, characters, locations, styleKey);
   const learnedRules = await getLearnedRules();
   if (!learnedRules) return basePrompt;
   return `${basePrompt}\n\nLEARNED RULES: ${learnedRules}`;
