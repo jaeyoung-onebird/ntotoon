@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String?
+  name      String?
+  image     String?
+  bio       String?
+  credits   Int      @default(0) // 1크레딧 = 100원
+  role      String   @default("USER") // USER or ADMIN
+  createdAt DateTime @default(now()) @map("created_at")
+  projects  Project[]
+  ratings   Rating[]
+  comments  Comment[]
+  creditLogs CreditLog[]
+  payments   Payment[]
+  subscriptions Subscription[] @relation("Subscriptions")
+  subscribers   Subscription[] @relation("Subscribers")
+  reports   Report[]
+  @@map("users")
+}
+
+model CreditLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  amount    Int      // 양수=충전, 음수=차감
+  balance   Int      // 변동 후 잔액
+  reason    String   // "충전", "웹툰 생성 (프로젝트명)", etc.
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("credit_logs")
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  projectId String   @map("project_id")
+  episodeId String?  @map("episode_id")
+  score     Int      // 1-5
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@unique([userId, projectId, episodeId])
+  @@map("ratings")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  projectId String   @map("project_id")
+  episodeId String?  @map("episode_id")
+  text      String
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("comments")
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  userId      String        @map("user_id")
+  title       String
+  novelText   String        @map("novel_text")
+  status      ProjectStatus @default(DRAFT)
+  style       String        @default("manhwa")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  user        User          @relation(fields: [userId], references: [id])
+  characters  Character[]
+  episodes    Episode[]
+  jobs        Job[]
+  ratings     Rating[]
+  comments    Comment[]
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  DRAFT
+  ANALYZING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model Character {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+  name            String
+  description     String
+  referenceSheet  String?  @map("reference_sheet")
+  promptPrefix    String?  @map("prompt_prefix")
+  metadata        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  panelCharacters PanelCharacter[]
+  @@map("characters")
+}
+
+model Episode {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  number    Int
+  title     String?
+  summary   String?
+  novelText String?  @map("novel_text")
+  outputUrl String?  @map("output_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  panels    Panel[]
+  @@map("episodes")
+}
+
+model Panel {
+  id               String   @id @default(uuid())
+  episodeId        String   @map("episode_id")
+  orderIndex       Int      @map("order_index")
+  sceneDescription String   @map("scene_description")
+  setting          String?
+  mood             String?
+  cameraAngle      String?  @map("camera_angle")
+  imagePrompt      String?  @map("image_prompt")
+  rawImageUrl      String?  @map("raw_image_url")
+  finalImageUrl    String?  @map("final_image_url")
+  createdAt        DateTime @default(now()) @map("created_at")
+  episode          Episode  @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  dialogues        Dialogue[]
+  panelCharacters  PanelCharacter[]
+  @@map("panels")
+}
+
+model Dialogue {
+  id         String       @id @default(uuid())
+  panelId    String       @map("panel_id")
+  orderIndex Int          @map("order_index")
+  speaker    String
+  text       String
+  type       DialogueType @default(SPEECH)
+  positionX  Float?       @map("position_x")
+  positionY  Float?       @map("position_y")
+  panel      Panel        @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  @@map("dialogues")
+}
+
+enum DialogueType {
+  SPEECH
+  THOUGHT
+  NARRATION
+  SFX
+}
+
+model PanelCharacter {
+  id          String    @id @default(uuid())
+  panelId     String    @map("panel_id")
+  characterId String    @map("character_id")
+  emotion     String?
+  action      String?
+  panel       Panel     @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  @@map("panel_characters")
+}
+
+model Job {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  type        JobType
+  status      JobStatus @default(PENDING)
+  progress    Int       @default(0)
+  message     String?
+  result      Json?
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@map("jobs")
+}
+
+enum JobType {
+  FULL_PIPELINE
+  TEXT_ANALYSIS
+  CHARACTER_SHEET
+  PANEL_GENERATION
+  BUBBLE_OVERLAY
+  WEBTOON_ASSEMBLY
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Subscription {
+  id          String   @id @default(uuid())
+  subscriberId String  @map("subscriber_id")
+  authorId    String   @map("author_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  subscriber  User     @relation("Subscriptions", fields: [subscriberId], references: [id], onDelete: Cascade)
+  author      User     @relation("Subscribers", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriberId, authorId])
+  @@map("subscriptions")
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  reporterId  String   @map("reporter_id")
+  projectId   String?  @map("project_id")
+  commentId   String?  @map("comment_id")
+  reason      String
+  status      String   @default("PENDING") // PENDING, REVIEWED, DISMISSED
+  createdAt   DateTime @default(now()) @map("created_at")
+  reporter    User     @relation(fields: [reporterId], references: [id])
+
+  @@map("reports")
+}
+
+// QA 평가 결과 + 학습된 프롬프트 개선사항
+model QaResult {
+  id                    String   @id @default(uuid())
+  projectId             String   @map("project_id")
+  episodeId             String?  @map("episode_id")
+  overall               Int
+  characterConsistency  Int      @map("character_consistency")
+  artStyle              Int      @map("art_style")
+  noTextInImages        Int      @map("no_text_in_images")
+  speechBubbles         Int      @map("speech_bubbles")
+  storyFlow             Int      @map("story_flow")
+  backgroundQuality     Int      @map("background_quality")
+  issues                Json     // string[]
+  suggestions           Json     // string[]
+  createdAt             DateTime @default(now()) @map("created_at")
+  @@map("qa_results")
+}
+
+// 전역 프롬프트 개선사항 (QA에서 학습된 것들이 쌓임)
+model PromptImprovement {
+  id          String   @id @default(uuid())
+  category    String   // "character", "background", "text_removal", "style", "composition"
+  rule        String   // 실제 프롬프트에 추가될 문장
+  score       Int      @default(0) // 효과 점수 (높을수록 좋은 규칙)
+  active      Boolean  @default(true)
+  source      String?  // 어떤 QA에서 나온 규칙인지
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@map("prompt_improvements")
+}
+
+// 토스페이먼츠 결제 내역
+model Payment {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  orderId     String   @unique @map("order_id") // 우리가 생성한 주문 ID
+  paymentKey  String?  @unique @map("payment_key") // 토스 결제 키
+  amount      Int      // 결제 금액 (원)
+  credits     Int      // 충전될 크레딧 수
+  status      String   @default("PENDING") // PENDING, DONE, FAILED, CANCELED
+  method      String?  // 결제 수단 (카드, 가상계좌 등)
+  createdAt   DateTime @default(now()) @map("created_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+// 고득점 이미지 수집 (LoRA 학습 데이터셋용)
+model GoldenImage {
+  id          String   @id @default(uuid())
+  panelId     String   @map("panel_id")
+  projectId   String   @map("project_id")
+  imageUrl    String   @map("image_url")    // 로컬 파일 경로
+  prompt      String                         // 이 이미지를 생성한 프롬프트
+  qaScore     Int      @map("qa_score")      // QA 전체 점수
+  styleScore  Int      @map("style_score")   // 아트 스타일 점수
+  category    String   @default("panel")     // "panel", "character_sheet", "background"
+  tags        Json?                           // ["close-up", "cafe", "rainy"] 등
+  usedForLora Boolean  @default(false) @map("used_for_lora") // LoRA 학습에 사용했는지
+  createdAt   DateTime @default(now()) @map("created_at")
+  @@map("golden_images")
+}
