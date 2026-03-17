@@ -262,8 +262,8 @@ async function regenerateBadPanels(
 
       const finalBuffer = await addSpeechBubbles(imageBuffer, dialogues);
 
-      const rawKey = `projects/${projectId}/episodes/${episodeId}/panels/${panel.orderIndex}_raw.png`;
-      const finalKey = `projects/${projectId}/episodes/${episodeId}/panels/${panel.orderIndex}_final.png`;
+      const rawKey = `projects/${projectId}/episodes/${episodeId}/panels/${panel.orderIndex}_raw.jpg`;
+      const finalKey = `projects/${projectId}/episodes/${episodeId}/panels/${panel.orderIndex}_final.jpg`;
       await uploadToS3(imageBuffer, rawKey);
       const finalUrl = await uploadToS3(finalBuffer, finalKey);
 

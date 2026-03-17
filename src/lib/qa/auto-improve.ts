@@ -98,8 +98,8 @@ export async function runQALoop(
         const finalBuffer = await addSpeechBubbles(imageBuffer, dialogues);
 
         // 저장
-        const rawKey = `projects/${projectId}/episodes/${episode.id}/panels/${index}_raw.png`;
-        const finalKey = `projects/${projectId}/episodes/${episode.id}/panels/${index}_final.png`;
+        const rawKey = `projects/${projectId}/episodes/${episode.id}/panels/${index}_raw.jpg`;
+        const finalKey = `projects/${projectId}/episodes/${episode.id}/panels/${index}_final.jpg`;
         await uploadToS3(imageBuffer, rawKey);
         const finalUrl = await uploadToS3(finalBuffer, finalKey);
 

@@ -214,7 +214,11 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
         }
       } catch {}
     };
-    es.onerror = () => { clearInterval(ticker); es.close(); };
+    es.onerror = () => {
+      clearInterval(ticker);
+      es.close();
+      setProgress(prev => prev ? { ...prev, step: 'failed' } : null);
+    };
     return () => { clearInterval(ticker); es.close(); };
   }, [jobId, project?.jobs, fetchProject]);
 
@@ -400,12 +404,12 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
       </div>
 
       {/* 재작성 (본인만) */}
-      {isOwner && episode && !isGenerating && (project.status === 'COMPLETED' || project.status === 'FAILED') && (
+      {isOwner && !isGenerating && (
         <div className="mb-6">
           {!rewriting ? (
             <div className="text-center">
               <button
-                onClick={() => { setRewriting(true); setRewriteText(episode?.novelText || ''); }}
+                onClick={() => { setRewriting(true); setRewriteText(episode?.novelText || project.novelText || ''); }}
                 className="px-5 py-2 text-sm text-gray-500 border border-gray-200 rounded-xl hover:bg-gray-50 hover:text-gray-700 transition-all"
               >
                 이 화 재작성하기

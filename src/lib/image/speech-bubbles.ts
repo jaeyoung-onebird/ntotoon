@@ -80,7 +80,7 @@ export async function addSpeechBubbles(
   const overlay = canvas.toBuffer('image/png');
   return sharp(imageBuffer)
     .composite([{ input: overlay, blend: 'over' }])
-    .png()
+    .jpeg({ quality: 100 })
     .toBuffer();
 }
 

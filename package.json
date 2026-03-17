@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "concurrently -n \"next,worker\" -c \"cyan,yellow\" \"next dev\" \"npx tsx src/lib/queue/pipeline-worker.ts\"",
+    "dev:next": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "canvas": "^3.2.1",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.7",
     "tailwindcss": "^4",

@@ -1,11 +1,11 @@
+import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import sharp from 'sharp';
 import { config } from '@/lib/config';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
-const MODEL_CHEAP = config.ai.modelCheap;
-const MODEL_QUALITY = config.ai.modelQuality;
 const MAX_CHAR_REFS = config.ai.maxCharRefs;
 
 // ---------------------------------------------------------------------------
@@ -31,13 +31,84 @@ export async function validateImage(buffer: Buffer): Promise<boolean> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Gemini with exponential backoff
-// ---------------------------------------------------------------------------
-
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
+
+// ---------------------------------------------------------------------------
+// GPT-Image-1
+// ---------------------------------------------------------------------------
+
+async function generateWithGPT(
+  prompt: string,
+  referenceImageBuffers?: Buffer[],
+  quality: 'low' | 'medium' | 'high' = 'low',
+  size: '1024x1024' | '1024x1536' | '1536x1024' = '1024x1536',
+  maxRetries = 3,
+): Promise<Buffer> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      let imageBuffer: Buffer;
+
+      if (referenceImageBuffers && referenceImageBuffers.length > 0) {
+        // 레퍼런스 이미지 있는 경우: edit API 사용
+        const refBuf = referenceImageBuffers[0];
+        const resized = await sharp(refBuf)
+          .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+          .png()
+          .toBuffer();
+
+        const file = await OpenAI.toFile(resized, 'reference.png', { type: 'image/png' });
+
+        const response = await openai.images.edit({
+          model: 'gpt-image-1.5',
+          image: file,
+          prompt,
+          size: '1024x1024',
+          quality,
+        });
+
+        const b64 = response.data?.[0]?.b64_json;
+        if (!b64) throw new Error('No image returned from GPT-Image-1 edit');
+        imageBuffer = Buffer.from(b64, 'base64');
+      } else {
+        // 레퍼런스 없는 경우: generate API 사용
+        const response = await openai.images.generate({
+          model: 'gpt-image-1.5',
+          prompt,
+          size,
+          quality,
+          n: 1,
+        });
+
+        const b64 = response.data?.[0]?.b64_json;
+        if (!b64) throw new Error('No image returned from GPT-Image-1');
+        imageBuffer = Buffer.from(b64, 'base64');
+      }
+
+      if (!(await validateImage(imageBuffer))) {
+        if (attempt < maxRetries) {
+          await sleep(2000 * (attempt + 1));
+          continue;
+        }
+        throw new Error('Invalid image after all retries');
+      }
+
+      return imageBuffer;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      const isRateLimit = error instanceof Error && error.message.includes('429');
+      const waitMs = isRateLimit ? 10000 * (attempt + 1) : 2000 * (attempt + 1);
+      console.warn(`[GPT-Image] Retry ${attempt + 1}/${maxRetries} in ${waitMs}ms:`, (error as Error).message);
+      await sleep(waitMs);
+    }
+  }
+  throw new Error('All GPT-Image attempts failed');
+}
+
+// ---------------------------------------------------------------------------
+// Gemini fallback
+// ---------------------------------------------------------------------------
 
 async function generateWithGemini(
   prompt: string,
@@ -48,31 +119,23 @@ async function generateWithGemini(
 ): Promise<Buffer> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Gemini: 이미지를 먼저, 텍스트 프롬프트를 마지막에 (instruction following 향상)
       const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
       if (referenceImageBuffers && referenceImageBuffers.length > 0) {
         for (const buf of referenceImageBuffers) {
-          // 레퍼런스 이미지는 1024px로 리사이즈 (API 비용 절감 + 속도)
           const resized = await sharp(buf)
             .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
             .png()
             .toBuffer();
-          contents.push({
-            inlineData: { mimeType: 'image/png', data: resized.toString('base64') },
-          });
+          contents.push({ inlineData: { mimeType: 'image/png', data: resized.toString('base64') } });
         }
       }
-
       contents.push({ text: prompt });
 
-      const response = await ai.models.generateContent({
+      const response = await gemini.models.generateContent({
         model,
         contents,
-        config: {
-          responseModalities: ['TEXT', 'IMAGE'],
-          imageConfig: { aspectRatio },
-        },
+        config: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio } },
       });
 
       let imageBuffer: Buffer | null = null;
@@ -89,19 +152,12 @@ async function generateWithGemini(
       if (!imageBuffer) throw new Error('No image returned from Gemini');
 
       if (!(await validateImage(imageBuffer))) {
-        if (attempt < maxRetries) {
-          console.warn(`[Gemini] Retry ${attempt + 1}: invalid image`);
-          await sleep(2000 * (attempt + 1));
-          continue;
-        }
+        if (attempt < maxRetries) { await sleep(2000 * (attempt + 1)); continue; }
         throw new Error('Invalid image after all retries');
       }
-
       return imageBuffer;
     } catch (error) {
       if (attempt === maxRetries) throw error;
-
-      // Rate limit (429) → 더 오래 대기
       const isRateLimit = error instanceof Error && error.message.includes('429');
       const waitMs = isRateLimit ? 10000 * (attempt + 1) : 2000 * (attempt + 1);
       console.warn(`[Gemini] Retry ${attempt + 1}/${maxRetries} in ${waitMs}ms:`, (error as Error).message);
@@ -116,8 +172,7 @@ async function generateWithGemini(
 // ---------------------------------------------------------------------------
 
 export async function generateCharacterSheet(prompt: string): Promise<Buffer> {
-  // 캐릭터 시트: 세로 비율이 자연스러움 (전신 + 표정)
-  return generateWithGemini(prompt, MODEL_QUALITY, undefined, '3:4');
+  return generateWithGPT(prompt, undefined, 'low', '1024x1536');
 }
 
 export async function generatePanel(
@@ -126,26 +181,18 @@ export async function generatePanel(
   referenceImageBuffers?: Buffer[],
   styleReferenceBuffers?: Buffer[],
 ): Promise<Buffer> {
-  const allRefs: Buffer[] = [];
   let enrichedPrompt = prompt;
 
-  // 스타일 레퍼런스 (최대 2장)
   if (styleReferenceBuffers && styleReferenceBuffers.length > 0) {
     const styleRefs = styleReferenceBuffers.slice(0, config.ai.maxStyleRefs);
-    allRefs.push(...styleRefs);
     enrichedPrompt = `STYLE REFERENCE: The first ${styleRefs.length} image(s) show the target art style. Match line weight, coloring, and visual quality ONLY — do NOT copy characters.\n\n${enrichedPrompt}`;
   }
 
-  // 캐릭터 레퍼런스 (캐릭터당 1장씩, 최대 MAX_CHAR_REFS장)
   if (hasCharacters && referenceImageBuffers && referenceImageBuffers.length > 0) {
     const charRefs = referenceImageBuffers.slice(0, MAX_CHAR_REFS);
-    allRefs.push(...charRefs);
-    enrichedPrompt += `\n\nCHARACTER REFERENCE: The last ${charRefs.length} image(s) show the exact character(s) to draw. Reproduce same face, hair, and clothing precisely. If the prompt says "1boy", the character MUST be drawn as male.`;
+    enrichedPrompt += `\n\nCHARACTER REFERENCE: Reproduce exact same face, hair, and clothing. If prompt says "1boy", draw as male.`;
+    return generateWithGPT(enrichedPrompt, charRefs, 'low', '1024x1536');
   }
 
-  if (allRefs.length > 0) {
-    return generateWithGemini(enrichedPrompt, MODEL_QUALITY, allRefs, '2:3');
-  }
-
-  return generateWithGemini(enrichedPrompt, MODEL_CHEAP, undefined, '2:3');
+  return generateWithGPT(enrichedPrompt, undefined, 'low', '1024x1536');
 }

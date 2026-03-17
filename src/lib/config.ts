@@ -8,8 +8,8 @@ export const config = {
     panelGap: parseInt(process.env.PANEL_GAP || '30'),
   },
   ai: {
-    modelCheap: process.env.GEMINI_MODEL_CHEAP || 'gemini-2.5-flash-preview-image-generation',
-    modelQuality: process.env.GEMINI_MODEL_QUALITY || 'gemini-2.0-flash-preview-image-generation',
+    modelCheap: process.env.GEMINI_MODEL_CHEAP || 'gemini-2.5-flash-image',
+    modelQuality: process.env.GEMINI_MODEL_QUALITY || 'gemini-3.1-flash-image-preview',
     analyzeModel: process.env.CLAUDE_ANALYZE_MODEL || 'claude-sonnet-4-6',
     qaModel: process.env.QA_MODEL || 'claude-sonnet-4-6',
     maxStyleRefs: parseInt(process.env.MAX_STYLE_REFS || '2'),

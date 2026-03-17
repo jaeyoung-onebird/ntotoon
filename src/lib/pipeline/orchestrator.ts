@@ -57,7 +57,7 @@ export async function runPipeline(
           number: ep.number,
           summary: ep.summary || '',
           lastScene: ep.panels[0]?.sceneDescription || '',
-          characters: existingChars.map(c => ({ name: c.name, appearance: c.description })),
+          characters: existingChars.map(c => ({ name: c.name, appearance: c.promptPrefix || c.description })),
         }))
       : undefined;
 
@@ -276,7 +276,7 @@ export async function runPipeline(
           const isWideShot = panel.camera_angle === 'wide-shot' || panel.camera_angle === 'bird-eye';
           const styleRefs = isWideShot ? styleBgRefs : stylePanelRefs;
           const imageBuffer = await generatePanel(prompt, hasCharacters, refBuffers.length > 0 ? refBuffers : undefined, styleRefs.length > 0 ? styleRefs : undefined);
-          const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_raw.png`;
+          const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_raw.jpg`;
           const rawUrl = await uploadToS3(imageBuffer, s3Key);
 
           // Save panel to DB
@@ -348,7 +348,7 @@ export async function runPipeline(
           positionY: placements[di]?.y,
         }));
         const finalBuffer = await addSpeechBubbles(panel.buffer, dialoguesWithPositions);
-        const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_final.png`;
+        const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_final.jpg`;
         const finalUrl = await uploadToS3(finalBuffer, s3Key);
 
         await prisma.panel.update({
@@ -365,7 +365,7 @@ export async function runPipeline(
     const webtoonBuffer = await assembleWebtoon(
       panelsWithBubbles.map((p) => ({ buffer: p.buffer, id: p.id }))
     );
-    const webtoonKey = `projects/${projectId}/episodes/${episode.id}/webtoon.png`;
+    const webtoonKey = `projects/${projectId}/episodes/${episode.id}/webtoon.jpg`;
     const webtoonUrl = await uploadToS3(webtoonBuffer, webtoonKey);
 
     await prisma.episode.update({

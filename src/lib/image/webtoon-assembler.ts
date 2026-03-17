@@ -21,7 +21,7 @@ export async function assembleWebtoon(panels: PanelImage[]): Promise<Buffer> {
 
       const buffer = await sharp(panel.buffer)
         .resize(WEBTOON_WIDTH, newHeight, { fit: 'fill' })
-        .png()
+        .png({ compressionLevel: 1 })
         .toBuffer();
 
       return { buffer, height: newHeight, id: panel.id };
@@ -52,7 +52,7 @@ export async function assembleWebtoon(panels: PanelImage[]): Promise<Buffer> {
     },
   })
     .composite(compositeInputs)
-    .png({ compressionLevel: 6 })
+    .jpeg({ quality: 100, progressive: true })
     .toBuffer();
 }
 
@@ -62,6 +62,6 @@ export async function createPanelThumbnail(
 ): Promise<Buffer> {
   return sharp(panelBuffer)
     .resize(width, null, { fit: 'inside' })
-    .jpeg({ quality: 80 })
+    .jpeg({ quality: 100 })
     .toBuffer();
 }
