@@ -8,11 +8,13 @@ export const config = {
     panelGap: parseInt(process.env.PANEL_GAP || '30'),
   },
   ai: {
-    modelCheap: process.env.GEMINI_MODEL_CHEAP || 'gemini-2.5-flash-image',
-    modelQuality: process.env.GEMINI_MODEL_QUALITY || 'gemini-3.1-flash-image-preview',
-    qaModel: process.env.QA_MODEL || 'claude-sonnet-4-20250514',
-    maxStyleRefs: parseInt(process.env.MAX_STYLE_REFS || '3'),
+    modelCheap: process.env.GEMINI_MODEL_CHEAP || 'gemini-2.5-flash-preview-image-generation',
+    modelQuality: process.env.GEMINI_MODEL_QUALITY || 'gemini-2.0-flash-preview-image-generation',
+    analyzeModel: process.env.CLAUDE_ANALYZE_MODEL || 'claude-sonnet-4-6',
+    qaModel: process.env.QA_MODEL || 'claude-sonnet-4-6',
+    maxStyleRefs: parseInt(process.env.MAX_STYLE_REFS || '2'),
     maxEvalPanels: parseInt(process.env.MAX_EVAL_PANELS || '10'),
+    maxCharRefs: parseInt(process.env.MAX_CHAR_REFS || '2'), // 패널당 최대 캐릭터 레퍼런스 수
   },
   credits: {
     exchangeRate: parseFloat(process.env.USD_TO_KRW || '1370'),

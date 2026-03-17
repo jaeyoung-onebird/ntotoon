@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { config } from '@/lib/config';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -36,7 +37,7 @@ IMPORTANT: This is a CONTINUATION. The first panel must naturally follow from th
   }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: config.ai.analyzeModel,
     max_tokens: 8192,
     messages: [
       {

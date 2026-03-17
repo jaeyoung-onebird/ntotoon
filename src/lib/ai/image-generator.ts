@@ -1,18 +1,15 @@
 import { GoogleGenAI } from '@google/genai';
 import sharp from 'sharp';
+import { config } from '@/lib/config';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
-// 모델 전략 (2026.03 기준)
-// - 2.5 Flash: $0.039/장, 저렴 — 배경, 와이드샷
-// - 3.1 Flash: $0.067/장, 최신+고퀄 — 캐릭터 시트, 캐릭터 패널
-import { config } from '@/lib/config';
-
 const MODEL_CHEAP = config.ai.modelCheap;
 const MODEL_QUALITY = config.ai.modelQuality;
+const MAX_CHAR_REFS = config.ai.maxCharRefs;
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Validation
 // ---------------------------------------------------------------------------
 
 export async function validateImage(buffer: Buffer): Promise<boolean> {
@@ -35,47 +32,49 @@ export async function validateImage(buffer: Buffer): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
-// Core generation via Gemini
+// Gemini with exponential backoff
 // ---------------------------------------------------------------------------
+
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function generateWithGemini(
   prompt: string,
   model: string,
   referenceImageBuffers?: Buffer[],
   aspectRatio = '2:3',
-  maxRetries = 2,
+  maxRetries = 3,
 ): Promise<Buffer> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      // Build contents: text prompt + optional reference images
-      const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
-        { text: prompt },
-      ];
+      // Gemini: 이미지를 먼저, 텍스트 프롬프트를 마지막에 (instruction following 향상)
+      const contents: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
 
       if (referenceImageBuffers && referenceImageBuffers.length > 0) {
         for (const buf of referenceImageBuffers) {
+          // 레퍼런스 이미지는 1024px로 리사이즈 (API 비용 절감 + 속도)
+          const resized = await sharp(buf)
+            .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+            .png()
+            .toBuffer();
           contents.push({
-            inlineData: {
-              mimeType: 'image/png',
-              data: buf.toString('base64'),
-            },
+            inlineData: { mimeType: 'image/png', data: resized.toString('base64') },
           });
         }
       }
+
+      contents.push({ text: prompt });
 
       const response = await ai.models.generateContent({
         model,
         contents,
         config: {
           responseModalities: ['TEXT', 'IMAGE'],
-          imageConfig: {
-            aspectRatio,
-            imageSize: '1K',
-          },
+          imageConfig: { aspectRatio },
         },
       });
 
-      // Extract image from response
       let imageBuffer: Buffer | null = null;
       const parts = response.candidates?.[0]?.content?.parts;
       if (parts) {
@@ -87,25 +86,29 @@ async function generateWithGemini(
         }
       }
 
-      if (!imageBuffer) {
-        throw new Error('No image returned from Gemini');
-      }
+      if (!imageBuffer) throw new Error('No image returned from Gemini');
 
       if (!(await validateImage(imageBuffer))) {
         if (attempt < maxRetries) {
-          console.warn(`Retry ${attempt + 1}: black/invalid image`);
+          console.warn(`[Gemini] Retry ${attempt + 1}: invalid image`);
+          await sleep(2000 * (attempt + 1));
           continue;
         }
-        throw new Error('Black/invalid image after retries');
+        throw new Error('Invalid image after all retries');
       }
 
       return imageBuffer;
     } catch (error) {
       if (attempt === maxRetries) throw error;
-      console.warn(`Retry ${attempt + 1}:`, error);
+
+      // Rate limit (429) → 더 오래 대기
+      const isRateLimit = error instanceof Error && error.message.includes('429');
+      const waitMs = isRateLimit ? 10000 * (attempt + 1) : 2000 * (attempt + 1);
+      console.warn(`[Gemini] Retry ${attempt + 1}/${maxRetries} in ${waitMs}ms:`, (error as Error).message);
+      await sleep(waitMs);
     }
   }
-  throw new Error('All attempts failed');
+  throw new Error('All Gemini attempts failed');
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +116,8 @@ async function generateWithGemini(
 // ---------------------------------------------------------------------------
 
 export async function generateCharacterSheet(prompt: string): Promise<Buffer> {
-  return generateWithGemini(prompt, MODEL_QUALITY, undefined, '3:2');
+  // 캐릭터 시트: 세로 비율이 자연스러움 (전신 + 표정)
+  return generateWithGemini(prompt, MODEL_QUALITY, undefined, '3:4');
 }
 
 export async function generatePanel(
@@ -125,35 +129,23 @@ export async function generatePanel(
   const allRefs: Buffer[] = [];
   let enrichedPrompt = prompt;
 
+  // 스타일 레퍼런스 (최대 2장)
   if (styleReferenceBuffers && styleReferenceBuffers.length > 0) {
-    allRefs.push(...styleReferenceBuffers);
-    enrichedPrompt += `\n\nSTYLE REFERENCE: The first ${styleReferenceBuffers.length} attached image(s) are high-quality style examples. Match their art style, line weight, coloring technique, and overall visual quality exactly. Do NOT copy the characters in these style references — only copy the art style.`;
+    const styleRefs = styleReferenceBuffers.slice(0, config.ai.maxStyleRefs);
+    allRefs.push(...styleRefs);
+    enrichedPrompt = `STYLE REFERENCE: The first ${styleRefs.length} image(s) show the target art style. Match line weight, coloring, and visual quality ONLY — do NOT copy characters.\n\n${enrichedPrompt}`;
   }
 
+  // 캐릭터 레퍼런스 (캐릭터당 1장씩, 최대 MAX_CHAR_REFS장)
   if (hasCharacters && referenceImageBuffers && referenceImageBuffers.length > 0) {
-    allRefs.push(...referenceImageBuffers);
-    enrichedPrompt += `\n\nCHARACTER REFERENCE: The remaining ${referenceImageBuffers.length} attached image(s) show the characters. Draw them exactly as shown — same face, hairstyle, clothing, and colors. If the prompt says "1boy", the character MUST be male regardless of style references.`;
+    const charRefs = referenceImageBuffers.slice(0, MAX_CHAR_REFS);
+    allRefs.push(...charRefs);
+    enrichedPrompt += `\n\nCHARACTER REFERENCE: The last ${charRefs.length} image(s) show the exact character(s) to draw. Reproduce same face, hair, and clothing precisely. If the prompt says "1boy", the character MUST be drawn as male.`;
   }
 
   if (allRefs.length > 0) {
     return generateWithGemini(enrichedPrompt, MODEL_QUALITY, allRefs, '2:3');
   }
-  return generateWithGemini(prompt, MODEL_CHEAP, undefined, '2:3');
-}
 
-export async function generatePanelsBatch(
-  panels: Array<{ prompt: string; hasCharacters: boolean; referenceImageBuffers?: Buffer[] }>,
-  batchSize = 5,
-  onProgress?: (completed: number, total: number) => void,
-): Promise<Buffer[]> {
-  const results: Buffer[] = [];
-  for (let i = 0; i < panels.length; i += batchSize) {
-    const batch = panels.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map((p) => generatePanel(p.prompt, p.hasCharacters, p.referenceImageBuffers)),
-    );
-    results.push(...batchResults);
-    onProgress?.(results.length, panels.length);
-  }
-  return results;
+  return generateWithGemini(enrichedPrompt, MODEL_CHEAP, undefined, '2:3');
 }

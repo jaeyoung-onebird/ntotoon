@@ -237,13 +237,16 @@ export async function runPipeline(
           const prompt = await buildPanelPromptWithLearning(panel, characterMap, locationMap);
           const hasCharacters = panel.characters_present.length > 0;
           // Include both full character sheet and cropped face as references
-          const sheetBuffers = panel.characters_present
-            .map((name) => characterRefBuffers.get(name))
-            .filter((buf): buf is Buffer => !!buf);
-          const faceBuffers = panel.characters_present
-            .map((name) => characterFaceBuffers.get(name))
-            .filter((buf): buf is Buffer => !!buf);
-          const refBuffers = [...sheetBuffers, ...faceBuffers];
+          // 레퍼런스 전략: 얼굴 크롭 우선 (얼굴이 더 명확), 없으면 시트 사용
+          // 패널당 최대 2캐릭터 레퍼런스 (초과 시 주연만)
+          const MAX_REFS = 2;
+          const refBuffers: Buffer[] = [];
+          for (const name of panel.characters_present.slice(0, MAX_REFS)) {
+            const face = characterFaceBuffers.get(name);
+            const sheet = characterRefBuffers.get(name);
+            if (face) refBuffers.push(face);
+            else if (sheet) refBuffers.push(sheet);
+          }
 
           const isWideShot = panel.camera_angle === 'wide-shot' || panel.camera_angle === 'bird-eye';
           const styleRefs = isWideShot ? styleBgRefs : stylePanelRefs;
