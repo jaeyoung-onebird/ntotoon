@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "worker": "npx tsx src/lib/queue/pipeline-worker.ts"
+    "worker": "npx tsx src/lib/queue/pipeline-worker.ts",
+    "postinstall": "npx tsx scripts/download-fonts.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.79.0",

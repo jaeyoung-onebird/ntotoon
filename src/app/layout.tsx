@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Noto_Sans_KR } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import AuthProvider from "@/components/auth-provider";
 import Header from "@/components/header";
 
-const geist = Geist({
-  variable: "--font-geist",
+const notoSansKR = Noto_Sans_KR({
+  variable: "--font-noto",
   subsets: ["latin"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
@@ -42,7 +43,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className={`${geist.variable} font-sans antialiased bg-white min-h-screen`}>
+      <body className={`${notoSansKR.variable} font-sans antialiased bg-white min-h-screen`}>
         <AuthProvider>
           <Header />
           <main className="min-h-[calc(100vh-65px)]">{children}</main>

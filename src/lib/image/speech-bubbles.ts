@@ -3,19 +3,19 @@ import sharp from 'sharp';
 import type { DialogueData } from '@/types/scene';
 import path from 'path';
 
-// 한글 폰트 등록
+// 한글 폰트 등록 (postinstall 스크립트로 다운로드된 NotoSansKR 우선)
 try {
-  registerFont(path.join(process.cwd(), 'public/fonts/AppleSDGothicNeo.ttc'), {
-    family: 'AppleSD',
+  registerFont(path.join(process.cwd(), 'public/fonts/NotoSansKR-Bold.otf'), {
+    family: 'NotoSansKR',
     weight: 'bold',
   });
 } catch {
   console.warn('Korean font not found, using system fallback');
 }
 
-const FONT = 'bold 24px "AppleSD", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
-const NARRATION_FONT = '20px "AppleSD", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
-const SFX_FONT = 'bold 36px "AppleSD", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+const FONT = 'bold 24px "NotoSansKR", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif';
+const NARRATION_FONT = '20px "NotoSansKR", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif';
+const SFX_FONT = 'bold 36px "NotoSansKR", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif';
 
 const MAX_LINE_WIDTH = 240;
 const PADDING = 16;
