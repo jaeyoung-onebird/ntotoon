@@ -82,7 +82,7 @@ async function learnFromFailure(score: QAScore) {
   try {
   // Claude에게 구체적인 프롬프트 규칙 생성 요청
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     messages: [{
       role: 'user',
