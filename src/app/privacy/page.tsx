@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
       <h1 className="text-3xl font-bold text-gray-900 mb-2">개인정보처리방침</h1>
-      <p className="text-sm text-gray-400 mb-10">엔투툰 (NTOW) 개인정보처리방침</p>
+      <p className="text-sm text-gray-400 mb-10">엔투툰 (NTOTOON) 개인정보처리방침</p>
 
       <div className="space-y-10 text-gray-700 leading-relaxed">
         {/* 1. 수집하는 개인정보 */}

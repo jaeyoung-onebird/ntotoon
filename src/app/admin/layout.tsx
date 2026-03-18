@@ -55,7 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen flex bg-gray-50">
       <aside className="w-56 bg-white border-r border-gray-200 p-4 flex flex-col gap-1">
         <Link href="/" className="text-lg font-bold text-gray-900 mb-6 block">
-          NTOW Admin
+          NTOTOON Admin
         </Link>
         {navItems.map(item => (
           <Link

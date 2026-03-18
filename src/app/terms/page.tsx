@@ -8,7 +8,7 @@ export default function TermsPage() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-16">
       <h1 className="text-3xl font-bold text-gray-900 mb-2">서비스 이용약관</h1>
-      <p className="text-sm text-gray-400 mb-10">엔투툰 (NTOW) 서비스 이용약관</p>
+      <p className="text-sm text-gray-400 mb-10">엔투툰 (NTOTOON) 서비스 이용약관</p>
 
       <div className="space-y-10 text-gray-700 leading-relaxed">
         {/* 제1조 */}

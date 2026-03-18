@@ -128,6 +128,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
   }, [id, project, episodeNum]);
 
   const handleRate = async (score: number) => {
+    if (!session?.user) { alert('로그인이 필요합니다'); window.location.href = '/login'; return; }
     setUserRating(score);
     try {
       await fetch(`/api/projects/${id}/ratings`, {
@@ -143,6 +144,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
   };
 
   const handleComment = async () => {
+    if (!session?.user) { alert('로그인이 필요합니다'); window.location.href = '/login'; return; }
     if (!commentText.trim()) return;
     setCommentLoading(true);
     try {
@@ -401,6 +403,55 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5.646 3.354a.5.5 0 01.708-.708l5 5a.5.5 0 010 .708l-5 5a.5.5 0 01-.708-.708L10.293 8 5.646 3.354z"/></svg>
           </Link>
         ) : <div />}
+      </div>
+
+      {/* 공유하기 */}
+      <div className="max-w-[600px] mx-auto mb-6">
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/projects/${id}/episodes/${episodeNum}`;
+              navigator.clipboard.writeText(url).then(() => alert('링크가 복사되었습니다!')).catch(() => {});
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-200 transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            링크 복사
+          </button>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/projects/${id}/episodes/${episodeNum}`;
+              const text = `${project.title} ${episodeNum}화`;
+              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-black transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X
+          </button>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/projects/${id}/episodes/${episodeNum}`;
+              const text = `${project.title} ${episodeNum}화`;
+              window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank', 'width=600,height=400');
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#1877F2] text-white text-sm font-medium rounded-xl hover:bg-[#166FE5] transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Facebook
+          </button>
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/projects/${id}/episodes/${episodeNum}`;
+              const text = `${project.title} ${episodeNum}화`;
+              window.open(`https://story.kakao.com/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, '_blank', 'width=600,height=400');
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#FEE500] text-[#3C1E1E] text-sm font-medium rounded-xl hover:bg-[#FDD835] transition-all"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-5.52 0-10 3.59-10 8 0 2.83 1.88 5.32 4.72 6.73-.21.78-.76 2.82-.87 3.26-.14.55.2.54.42.39.17-.12 2.71-1.84 3.8-2.59.62.09 1.26.14 1.93.14 5.52 0 10-3.59 10-8s-4.48-8-10-8z"/></svg>
+            카카오
+          </button>
+        </div>
       </div>
 
       {/* 재작성 (본인만) */}
