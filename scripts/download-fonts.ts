@@ -11,11 +11,11 @@ const FONT_DIR = path.join(process.cwd(), 'public', 'fonts');
 const FONTS = [
   {
     name: 'NanumSquareRoundB.ttf',
-    url: 'https://github.com/nicenorm/NanumSquareRound/raw/main/NanumSquareRoundB.ttf',
+    url: 'https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquareRound/NanumSquareRoundB.ttf',
   },
   {
     name: 'NanumSquareRoundEB.ttf',
-    url: 'https://github.com/nicenorm/NanumSquareRound/raw/main/NanumSquareRoundEB.ttf',
+    url: 'https://hangeul.pstatic.net/hangeul_static/webfont/NanumSquareRound/NanumSquareRoundEB.ttf',
   },
 ];
 
@@ -46,7 +46,8 @@ async function main() {
 
   for (const font of FONTS) {
     const fontPath = path.join(FONT_DIR, font.name);
-    if (fs.existsSync(fontPath) && fs.statSync(fontPath).size > 0) {
+    if (fs.existsSync(fontPath) && fs.statSync(fontPath).size > 100000) {
+      // 100KB 이상이면 정상 TTF (HTML은 보통 30KB 이하)
       console.log(`[fonts] ${font.name} already exists, skipping`);
       continue;
     }
