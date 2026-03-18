@@ -16,7 +16,7 @@ export async function expandText(
     : '';
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 8192,
     system: `당신은 웹툰 원작 소설을 집필하는 전문 작가입니다.
 작가가 제공한 텍스트가 아무리 짧거나 허술해도, 반드시 웹툰 한 화 분량(16컷을 만들 수 있는 분량)의 완성된 소설 텍스트를 만들어냅니다.
