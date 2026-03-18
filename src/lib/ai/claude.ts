@@ -34,12 +34,34 @@ ${text}
 IMPORTANT: This is a CONTINUATION. The first panel must naturally follow from the last scene of the previous episode. Do NOT re-introduce characters entering the scene if they were already present. Maintain exact same character appearances as listed above.`;
   }
 
-  const response = await anthropic.messages.create({
-    model: config.ai.analyzeModel,
-    max_tokens: 16000,
-    messages: [{ role: 'user', content: userMessage }],
-    system: NOVEL_ANALYSIS_SYSTEM_PROMPT,
-  });
+  const MAX_RETRIES = 3;
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+        console.log(`[Claude] 재시도 ${attempt}/${MAX_RETRIES} (${delay}ms 대기)`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      var response = await anthropic.messages.create({
+        model: config.ai.analyzeModel,
+        max_tokens: 16000,
+        messages: [{ role: 'user', content: userMessage }],
+        system: NOVEL_ANALYSIS_SYSTEM_PROMPT,
+      });
+      break;
+    } catch (err) {
+      lastError = err as Error;
+      const status = (err as { status?: number }).status;
+      // 4xx 클라이언트 에러(인증 실패 등)는 재시도 무의미
+      if (status && status >= 400 && status < 500 && status !== 429) {
+        throw err;
+      }
+      if (attempt === MAX_RETRIES - 1) throw err;
+    }
+  }
 
   if (!response.content || response.content.length === 0) {
     throw new Error('Claude API returned empty response');

@@ -3,8 +3,9 @@ import { config } from './config';
 
 // 크레딧 차감 (markup은 estimateGenerationCost에서 이미 적용됨)
 export async function deductCredits(userId: string, cost: number, reason: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.credits < cost) return false;
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.credits < cost) return false;
 
   await prisma.$transaction([
     prisma.user.update({
@@ -22,6 +23,10 @@ export async function deductCredits(userId: string, cost: number, reason: string
   ]);
 
   return true;
+  } catch (err) {
+    console.error('[Credits] deductCredits failed:', err);
+    return false;
+  }
 }
 
 // 크레딧 충전

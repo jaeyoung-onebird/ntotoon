@@ -79,6 +79,7 @@ export async function runAutoQA(
  * QA 실패에서 프롬프트 규칙 학습
  */
 async function learnFromFailure(score: QAScore) {
+  try {
   // Claude에게 구체적인 프롬프트 규칙 생성 요청
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
@@ -132,6 +133,9 @@ Maximum 4 rules. Only include rules for scores below 8.`,
       }
     }
   } catch { /* ignore parse errors */ }
+  } catch (err) {
+    console.warn('[QA] learnFromFailure failed:', (err as Error).message);
+  }
 }
 
 /**

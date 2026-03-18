@@ -94,7 +94,7 @@ export async function POST(
           where: { id: job.id },
           data: { progress: progress.progress, message: progress.message },
         });
-        await redis.publish(`pipeline:${job.id}`, JSON.stringify(progress));
+        await redis.publish(`pipeline:${job.id}`, JSON.stringify(progress)).catch(() => {});
       })
         .then(async (outputUrl) => {
           await prisma.job.update({
