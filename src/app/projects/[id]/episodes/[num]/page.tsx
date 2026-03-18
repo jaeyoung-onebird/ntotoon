@@ -291,11 +291,11 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
     if (!rewriteText.trim()) return;
     setNextEpLoading(true);
     try {
-      // 같은 에피소드를 새 텍스트로 재생성
+      // 같은 에피소드 번호로 재생성 (기존 에피소드 삭제 후)
       const res = await fetch(`/api/projects/${id}/episodes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ novelText: rewriteText.trim() }),
+        body: JSON.stringify({ novelText: rewriteText.trim(), rewrite: true, episodeNumber: episodeNum }),
       });
       if (!res.ok) throw new Error('재작성 실패');
       const { jobId: newJobId, episodeNumber } = await res.json();

@@ -45,7 +45,27 @@ export async function POST(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    const nextEpisodeNumber = (project.episodes[0]?.number ?? 0) + 1;
+    // rewrite=true면 기존 에피소드 삭제 후 같은 번호로 재생성
+    const isRewrite = body.rewrite === true && body.episodeNumber;
+    let nextEpisodeNumber: number;
+
+    if (isRewrite) {
+      // 재작성: 해당 에피소드 삭제
+      const existing = await prisma.episode.findFirst({
+        where: { projectId: id, number: body.episodeNumber },
+      });
+      if (existing) {
+        await prisma.episode.delete({ where: { id: existing.id } });
+      }
+      nextEpisodeNumber = body.episodeNumber;
+    } else {
+      // 새 에피소드: 현재 존재하는 에피소드 중 가장 높은 번호 + 1
+      const lastEp = await prisma.episode.findFirst({
+        where: { projectId: id },
+        orderBy: { number: 'desc' },
+      });
+      nextEpisodeNumber = (lastEp?.number ?? 0) + 1;
+    }
 
     // 프로젝트의 novelText를 새 에피소드 텍스트로 업데이트
     await prisma.project.update({
