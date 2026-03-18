@@ -185,14 +185,22 @@ export async function generatePanel(
 
   if (styleReferenceBuffers && styleReferenceBuffers.length > 0) {
     const styleRefs = styleReferenceBuffers.slice(0, config.ai.maxStyleRefs);
-    enrichedPrompt = `STYLE REFERENCE: The first ${styleRefs.length} image(s) show the target art style. Match line weight, coloring, and visual quality ONLY — do NOT copy characters.\n\n${enrichedPrompt}`;
+    enrichedPrompt = `STYLE REFERENCE: Match the art style of the reference image(s) — line weight, coloring, shading technique. Do NOT copy characters from references.\n\n${enrichedPrompt}`;
   }
 
   if (hasCharacters && referenceImageBuffers && referenceImageBuffers.length > 0) {
-    const charRefs = referenceImageBuffers.slice(0, MAX_CHAR_REFS);
-    enrichedPrompt += `\n\nCHARACTER REFERENCE: Reproduce exact same face, hair, and clothing. If prompt says "1boy", draw as male.`;
-    return generateWithGPT(enrichedPrompt, charRefs, 'low', '1024x1536');
+    enrichedPrompt += `\n\nCHARACTER REFERENCE: Reproduce exact same face, hair, and clothing from reference image(s). If prompt says "1boy", draw as male.`;
   }
 
-  return generateWithGPT(enrichedPrompt, undefined, 'low', '1024x1536');
+  // 레퍼런스 이미지 합치기 (캐릭터 + 스타일)
+  const allRefs: Buffer[] = [];
+  if (referenceImageBuffers) allRefs.push(...referenceImageBuffers.slice(0, MAX_CHAR_REFS));
+  if (styleReferenceBuffers) allRefs.push(...styleReferenceBuffers.slice(0, config.ai.maxStyleRefs));
+
+  return generateWithGemini(
+    enrichedPrompt,
+    config.ai.modelQuality, // gemini-3.1-flash-image-preview
+    allRefs.length > 0 ? allRefs : undefined,
+    '2:3',
+  );
 }
