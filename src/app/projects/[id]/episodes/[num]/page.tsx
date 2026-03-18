@@ -455,7 +455,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           </div>
           {/* 메이킹 로그 */}
           {logs.length > 0 && (
-            <div className="bg-black rounded-lg p-3 max-h-40 overflow-y-auto border border-green-900/50" style={{ boxShadow: '0 0 15px rgba(0,255,0,0.05) inset' }}>
+            <div className="led-panel rounded-lg p-3 max-h-40 overflow-y-auto border border-green-900/50" style={{ boxShadow: '0 0 15px rgba(0,255,0,0.05) inset' }}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ boxShadow: '0 0 6px #22c55e' }} />
                 <span className="text-[10px] text-green-600 font-mono tracking-widest uppercase">System Log</span>

@@ -39,6 +39,13 @@ body {
   animation: fade-in 0.5s ease-out;
 }
 
+/* LED 전광판 도트 배경 */
+.led-panel {
+  background-color: #0a0a0a;
+  background-image: radial-gradient(circle, rgba(0,255,0,0.12) 1.5px, transparent 1.5px);
+  background-size: 6px 6px;
+}
+
 /* 웹툰 이미지 불펌 방지 */
 img.webtoon-panel {
   -webkit-user-select: none;
