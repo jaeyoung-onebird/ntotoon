@@ -1,10 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import sharp from 'sharp';
 import { config } from '@/lib/config';
 import { prisma } from '@/lib/db';
 import { downloadFromS3 } from '@/lib/s3';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
 export interface QAScore {
   overall: number;
@@ -84,35 +84,20 @@ export async function evaluateWebtoon(projectId: string, episodeId: string): Pro
 
   if (panelBuffers.length === 0) throw new Error('Could not load any panel images');
 
-  // Claude Vision 평가
-  const imageContents: Anthropic.ImageBlockParam[] = [];
+  // Gemini Vision 평가
+  const imageContents: Array<{ inlineData: { mimeType: string; data: string } }> = [];
 
   for (const buf of charSheetBuffers) {
     const resized = await resizeForQA(buf);
-    imageContents.push({
-      type: 'image',
-      source: { type: 'base64', media_type: 'image/jpeg', data: resized.toString('base64') },
-    });
+    imageContents.push({ inlineData: { mimeType: 'image/jpeg', data: resized.toString('base64') } });
   }
 
   for (const buf of panelBuffers) {
     const resized = await resizeForQA(buf);
-    imageContents.push({
-      type: 'image',
-      source: { type: 'base64', media_type: 'image/jpeg', data: resized.toString('base64') },
-    });
+    imageContents.push({ inlineData: { mimeType: 'image/jpeg', data: resized.toString('base64') } });
   }
 
-  const response = await anthropic.messages.create({
-    model: config.ai.qaModel,
-    max_tokens: 1024,
-    messages: [{
-      role: 'user',
-      content: [
-        ...imageContents,
-        {
-          type: 'text',
-          text: `You are a professional webtoon quality evaluator.
+  const promptText = `You are a professional webtoon quality evaluator.
 
 The first ${charSheetBuffers.length} image(s) are CHARACTER REFERENCE SHEETS.
 The remaining ${panelBuffers.length} images are WEBTOON PANELS from the same episode.
@@ -139,17 +124,18 @@ Respond ONLY in JSON:
   "suggestions": ["actionable fix 1"]
 }
 \`\`\`
-Be harsh and specific.`,
-        },
-      ],
-    }],
+Be harsh and specific.`;
+
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3-flash',
+    contents: [...imageContents, { text: promptText }],
   });
 
-  const content = response.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response');
+  const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Unexpected response');
 
-  const jsonMatch = content.text.match(/```json\n?([\s\S]*?)\n?```/);
-  const jsonStr = jsonMatch ? jsonMatch[1] : content.text;
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
+  const jsonStr = jsonMatch ? jsonMatch[1] : text;
 
   let parsed: Record<string, unknown>;
   try {
