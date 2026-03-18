@@ -27,6 +27,7 @@ export default function Header() {
   }, [status, pathname]);
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link href="/" className="group select-none relative">
@@ -199,35 +200,49 @@ export default function Header() {
         </div>
       </div>
 
+    </header>
+
       {/* 모바일 하단 네비게이션 바 */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-100 safe-area-bottom">
-        <div className="flex items-center justify-around py-1.5">
-          <Link href="/" className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${pathname === '/' ? 'text-blue-600' : 'text-gray-400'}`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/' ? '2.5' : '1.8'} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z"/>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[9999] bg-white border-t border-gray-100 safe-area-bottom">
+        <div className="flex items-center justify-around py-1">
+          {/* 홈 */}
+          <Link href="/" className={`flex flex-col items-center gap-0.5 py-1.5 ${pathname === '/' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0v-4a1 1 0 011-1h2a1 1 0 011 1v4"/>
             </svg>
-            <span className="text-[10px] font-semibold">홈</span>
+            <span className="text-[9px] font-medium">홈</span>
           </Link>
-          <Link href={session?.user ? "/create" : "/login"} className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${pathname === '/create' ? 'text-blue-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${pathname === '/create' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14m7-7H5"/></svg>
+          {/* 내 작품 */}
+          <Link href={session?.user ? "/projects" : "/login"} className={`flex flex-col items-center gap-0.5 py-1.5 ${pathname === '/projects' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6h16M4 10h16M4 14h10M4 18h7"/>
+            </svg>
+            <span className="text-[9px] font-medium">내 작품</span>
+          </Link>
+          {/* 만들기 — 가운데 원형 강조 */}
+          <Link href={session?.user ? "/create" : "/login"} className="flex flex-col items-center -mt-4">
+            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-600/30">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14m7-7H5"/></svg>
             </div>
-            <span className="text-[10px] font-semibold">만들기</span>
+            <span className="text-[9px] font-medium text-blue-600 mt-0.5">만들기</span>
           </Link>
-          <Link href={session?.user ? "/projects" : "/login"} className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${pathname === '/projects' ? 'text-blue-600' : 'text-gray-400'}`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/projects' ? '2.5' : '1.8'} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          {/* 크레딧 */}
+          <Link href={session?.user ? "/credits" : "/login"} className={`flex flex-col items-center gap-0.5 py-1.5 ${pathname === '/credits' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M14.5 9a2.5 2.5 0 00-5 0c0 1.5 2.5 2 2.5 3.5M12 16h.01"/>
             </svg>
-            <span className="text-[10px] font-semibold">내 작품</span>
+            <span className="text-[9px] font-medium">크레딧</span>
           </Link>
-          <Link href={session?.user ? "/settings" : "/login"} className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${pathname === '/settings' ? 'text-blue-600' : 'text-gray-400'}`}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/settings' ? '2.5' : '1.8'} strokeLinecap="round" strokeLinejoin="round">
+          {/* 내 정보 */}
+          <Link href={session?.user ? "/settings" : "/login"} className={`flex flex-col items-center gap-0.5 py-1.5 ${pathname === '/settings' ? 'text-blue-600' : 'text-gray-400'}`}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-4 7a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
             </svg>
-            <span className="text-[10px] font-semibold">내 정보</span>
+            <span className="text-[9px] font-medium">내 정보</span>
           </Link>
         </div>
       </nav>
-    </header>
+    </>
   );
 }
