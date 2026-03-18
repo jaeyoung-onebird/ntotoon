@@ -91,13 +91,26 @@ LOCATIONS:
 - Define each location once with a FIXED English description string.
 - Reuse that EXACT string for every panel in that location. Never rephrase.
 
-18 PANELS — structure them like this:
-- Panel 1: Start in the middle of something interesting. No slow intros.
-- Panels 2-6: Build the world, let characters interact, plant seeds for conflict.
-- Panels 7-12: Things get complicated. Secrets, misunderstandings, confrontations, unexpected feelings.
-- Panels 13-16: Everything explodes. The truth comes out. Someone makes a choice they can't take back.
-- Panel 17: The aftermath — a face frozen in shock, a hand trembling, silence.
-- Panel 18: THE CLIFFHANGER. Cut at the worst possible moment. A door opens. A name is whispered. A phone lights up with a message we can't read. The reader must feel PHYSICAL frustration that there's no panel 19.
+DRAMA ENGINE — Your story must have ALL of these:
+1. A SECRET that someone is hiding. Every great story has a secret. Someone knows something others don't.
+2. A BETRAYAL or MISUNDERSTANDING that makes the reader gasp. Not at the end — in the MIDDLE. So the second half is aftermath.
+3. A moment where a character says ONE LINE that changes everything. The reader re-reads it three times.
+4. At least one moment of DARK HUMOR or IRONY that makes the reader laugh nervously.
+5. Physical intimacy OR physical violence (context-appropriate). A grabbed wrist, a slap, a forced kiss, a tight embrace, someone being shoved against a wall. Physicality creates tension.
+
+18 PANELS:
+- Panel 1: Drop the reader INTO a situation. Mid-conversation, mid-action, mid-crisis. NEVER "one day, in a place..."
+- Panels 2-5: Establish what's at stake. Why should the reader care? Give the character something to LOSE.
+- Panels 6-9: The TWIST. Something the reader didn't see coming. A lie exposed, a person who shouldn't be there appears, a message that changes everything. This is where the reader's jaw drops.
+- Panels 10-14: CHAOS. Characters react, confront, run, cry, fight, confess. This is the emotional rollercoaster. Every panel should feel like a punch.
+- Panels 15-17: The FALLOUT. Someone is broken. Someone is angry. Someone is walking away. The dust is settling but nothing is resolved.
+- Panel 18: THE BOMB. Drop one final piece of information that RECONTEXTUALIZES everything. The reader realizes something that makes them need to re-read the whole episode. Examples:
+  * A pregnancy test in a trash can
+  * A phone screen showing a conversation with someone unexpected
+  * A character we thought was the victim... smiling in the mirror
+  * Someone standing outside the door who heard EVERYTHING
+  * A flashback panel that reveals the REAL reason behind someone's actions
+  The reader must feel like the floor dropped out from under them.
 
 DIALOGUE RULES:
 - Max 35 characters per bubble. Shorter is better.
