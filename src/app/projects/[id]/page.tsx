@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, use } from 'react';
+import { useEffect, useState, useCallback, use, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -57,6 +57,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [showNextEpForm, setShowNextEpForm] = useState(false);
   const [nextEpLoading, setNextEpLoading] = useState(false);
   const [expanding, setExpanding] = useState(false);
+  const [expandElapsed, setExpandElapsed] = useState(0);
+
+  useEffect(() => {
+    if (!expanding) { setExpandElapsed(0); return; }
+    setExpandElapsed(0);
+    const timer = setInterval(() => setExpandElapsed(prev => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, [expanding]);
 
   const fetchProject = useCallback(async () => {
     try {
@@ -378,7 +386,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   disabled={expanding || nextEpLoading || nextEpText.trim().length < 10}
                   className="px-5 py-2.5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
-                  {expanding ? 'AI 작성 중...' : 'AI로 살 붙이기'}
+                  {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / 15) * 100))}% (${Math.max(0, 15 - expandElapsed)}초)` : 'AI로 살 붙이기'}
                 </button>
                 <button
                   onClick={() => { setShowNextEpForm(false); setNextEpText(''); }}

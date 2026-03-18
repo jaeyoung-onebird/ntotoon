@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { STYLE_PRESETS } from '@/lib/styles';
 
@@ -12,8 +12,17 @@ export default function CreatePage() {
   const [customRefs, setCustomRefs] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanding, setExpanding] = useState(false);
+  const [expandElapsed, setExpandElapsed] = useState(0);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const EXPAND_ESTIMATE = 15; // 예상 소요 시간 (초)
+
+  useEffect(() => {
+    if (!expanding) { setExpandElapsed(0); return; }
+    setExpandElapsed(0);
+    const timer = setInterval(() => setExpandElapsed(prev => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, [expanding]);
 
   const handleExpand = async () => {
     if (!novelText.trim()) return;
@@ -243,7 +252,7 @@ export default function CreatePage() {
             disabled={expanding || loading || novelText.trim().length < 10}
             className="py-3.5 px-5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
           >
-            {expanding ? 'AI 작성 중...' : 'AI로 살 붙이기'}
+            {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / EXPAND_ESTIMATE) * 100))}% (${Math.max(0, EXPAND_ESTIMATE - expandElapsed)}초)` : 'AI로 살 붙이기'}
           </button>
         </div>
       </form>

@@ -502,7 +502,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
                   disabled={expanding || nextEpLoading || rewriteText.trim().length < 10}
                   className="px-5 py-2.5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
-                  {expanding ? `AI 작성 중... (${expandElapsed}초)` : 'AI로 내용 추가'}
+                  {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / 15) * 100))}% (${Math.max(0, 15 - expandElapsed)}초)` : 'AI로 내용 추가'}
                 </button>
                 <button
                   onClick={() => { setRewriting(false); setRewriteText(''); }}
@@ -682,7 +682,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
                   disabled={expanding || nextEpLoading || nextEpText.trim().length < 10}
                   className="px-5 py-2.5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
-                  {expanding ? `AI 작성 중... (${expandElapsed}초)` : 'AI로 살 붙이기'}
+                  {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / 15) * 100))}% (${Math.max(0, 15 - expandElapsed)}초)` : 'AI로 살 붙이기'}
                 </button>
                 <button
                   onClick={() => { setShowNextEpForm(false); setNextEpText(''); }}
