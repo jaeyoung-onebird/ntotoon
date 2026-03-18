@@ -84,45 +84,47 @@ export default function FeedPage() {
     <div className="min-h-screen bg-gray-50">
       {/* 상단 배너 */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white">
-        <div className="max-w-6xl mx-auto px-6 py-10 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold mb-2">내 이야기를 웹툰으로</h1>
-            <p className="text-blue-200 text-sm">이야기만 쓰면 AI가 웹툰으로 만들어드려요. 누구나 작가가 될 수 있습니다.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {session?.user && attendance && !attendance.checkedIn && (
-              <button
-                onClick={handleCheckIn}
-                disabled={checkingIn}
-                className="px-5 py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-lg animate-pulse"
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-xl sm:text-3xl font-extrabold mb-1 sm:mb-2">내 이야기를 웹툰으로</h1>
+              <p className="text-blue-200 text-xs sm:text-sm">이야기만 쓰면 AI가 웹툰으로 만들어드려요.</p>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {session?.user && attendance && !attendance.checkedIn && (
+                <button
+                  onClick={handleCheckIn}
+                  disabled={checkingIn}
+                  className="px-3 sm:px-5 py-2 sm:py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-lg animate-pulse text-sm sm:text-base"
+                >
+                  {checkingIn ? '...' : `출석체크 +${attendance.reward}C`}
+                </button>
+              )}
+              {session?.user && attendance?.checkedIn && (
+                <div className="px-3 sm:px-5 py-2 sm:py-3 bg-white/20 backdrop-blur text-white font-semibold rounded-xl text-xs sm:text-sm">
+                  출석 완료 {attendance.streak > 1 && `(${attendance.streak}일 연속)`}
+                </div>
+              )}
+              <Link
+                href={session?.user ? "/create" : "/login"}
+                className="px-4 sm:px-6 py-2 sm:py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg text-sm sm:text-base whitespace-nowrap"
               >
-                {checkingIn ? '...' : `출석체크 +${attendance.reward}C`}
-              </button>
-            )}
-            {session?.user && attendance?.checkedIn && (
-              <div className="px-5 py-3 bg-white/20 backdrop-blur text-white font-semibold rounded-xl text-sm">
-                출석 완료 {attendance.streak > 1 && `(${attendance.streak}일 연속)`}
-              </div>
-            )}
-            <Link
-              href="/create"
-              className="px-6 py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg"
-            >
-              + 웹툰 만들기
-            </Link>
+                + 웹툰 만들기
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
       {/* 피드 */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {projects.length === 0 ? (
           <div className="text-center py-20">
             <div className="text-6xl mb-4">🎨</div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">아직 웹툰이 없어요</h2>
             <p className="text-gray-500 mb-6">첫 번째 웹툰을 만들어보세요!</p>
             <Link
-              href="/create"
+              href={session?.user ? "/create" : "/login"}
               className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all"
             >
               웹툰 만들기
