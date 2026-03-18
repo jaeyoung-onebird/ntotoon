@@ -364,9 +364,9 @@ function drawShoutBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: 
   const { x, y, w, h } = pos;
   const cx = x + w / 2;
   const cy = y + h / 2;
-  const rx = w / 2 + 14;
-  const ry = h / 2 + 10;
-  const spikes = 12;
+  const rx = w / 2 + 28;
+  const ry = h / 2 + 22;
+  const spikes = 10;
 
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -377,7 +377,7 @@ function drawShoutBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: 
   ctx.beginPath();
   for (let i = 0; i <= spikes * 2; i++) {
     const angle = (i * Math.PI) / spikes - Math.PI / 2;
-    const r = i % 2 === 0 ? 1.0 : 0.82;
+    const r = i % 2 === 0 ? 1.0 : 0.78;
     ctx.lineTo(cx + Math.cos(angle) * rx * r, cy + Math.sin(angle) * ry * r);
   }
   ctx.closePath();
@@ -390,7 +390,7 @@ function drawShoutBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: 
   ctx.beginPath();
   for (let i = 0; i <= spikes * 2; i++) {
     const angle = (i * Math.PI) / spikes - Math.PI / 2;
-    const r = i % 2 === 0 ? 1.0 : 0.82;
+    const r = i % 2 === 0 ? 1.0 : 0.78;
     ctx.lineTo(cx + Math.cos(angle) * rx * r, cy + Math.sin(angle) * ry * r);
   }
   ctx.closePath();
