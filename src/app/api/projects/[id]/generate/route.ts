@@ -31,12 +31,6 @@ export async function POST(
     }
 
     const redisHealthy = await checkRedisHealth();
-    if (!redisHealthy) {
-      return NextResponse.json(
-        { error: 'Service temporarily unavailable. Please try again later.' },
-        { status: 503 }
-      );
-    }
 
     const { id } = await params;
     const project = await prisma.project.findUnique({ where: { id } });
@@ -75,7 +69,7 @@ export async function POST(
     });
 
     // Run pipeline: use BullMQ queue if enabled, otherwise run inline
-    if (process.env.USE_QUEUE === 'true') {
+    if (process.env.USE_QUEUE === 'true' && redisHealthy) {
       const { pipelineQueue } = await import('@/lib/queue/pipeline-queue');
       await pipelineQueue.add('generate', { projectId: id, jobId: job.id });
     } else {
@@ -85,7 +79,7 @@ export async function POST(
           where: { id: job.id },
           data: { progress: progress.progress, message: progress.message },
         });
-        await redis.publish(`pipeline:${job.id}`, JSON.stringify(progress));
+        await redis.publish(`pipeline:${job.id}`, JSON.stringify(progress)).catch(() => {});
       })
         .then(async (outputUrl) => {
           await prisma.job.update({
