@@ -90,7 +90,7 @@ export default function FeedPage() {
               <h1 className="text-xl sm:text-3xl font-extrabold mb-1 sm:mb-2">내 이야기를 웹툰으로</h1>
               <p className="text-blue-200 text-xs sm:text-sm">이야기만 쓰면 AI가 웹툰으로 만들어드려요.</p>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 self-end sm:self-auto">
               {session?.user && attendance && !attendance.checkedIn && (
                 <button
                   onClick={handleCheckIn}
