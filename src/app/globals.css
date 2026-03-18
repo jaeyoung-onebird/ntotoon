@@ -46,6 +46,12 @@ body {
   background-size: 6px 6px;
 }
 
+/* 모바일 하단 네비 여백 */
+@media (max-width: 767px) {
+  main { padding-bottom: 60px; }
+}
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
 /* 웹툰 이미지 불펌 방지 */
 img.webtoon-panel {
   -webkit-user-select: none;

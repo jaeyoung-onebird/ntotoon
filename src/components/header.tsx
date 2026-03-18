@@ -186,48 +186,41 @@ export default function Header() {
           )}
         </nav>
 
-        {/* 모바일: 크레딧 + 햄버거 */}
-        <div className="flex md:hidden items-center gap-3">
+        {/* 모바일: 크레딧만 표시 (네비는 하단 고정) */}
+        <div className="flex md:hidden items-center gap-2">
           {session?.user && (
             <Link href="/credits" className="px-2.5 py-1 bg-yellow-50 text-yellow-700 text-xs font-semibold rounded-md border border-yellow-200">
               {credits !== null ? `${credits}C` : '...'}
             </Link>
           )}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all"
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              {mobileOpen ? (
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              ) : (
-                <path fillRule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-              )}
-            </svg>
-          </button>
+          {!session?.user && status !== 'loading' && (
+            <Link href="/login" className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg">로그인</Link>
+          )}
         </div>
       </div>
 
-      {/* 모바일 메뉴 드롭다운 */}
-      {mobileOpen && (
-        <div className="md:hidden border-t border-gray-100 bg-white px-6 py-4 space-y-2">
-          {session?.user ? (
-            <>
-              <Link href="/projects" className="block px-4 py-2.5 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100">내 작품</Link>
-              <Link href="/settings" className="block px-4 py-2.5 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100">{userName || session.user.name || '내 정보'}</Link>
-              <Link href="/credits" className="block px-4 py-2.5 text-yellow-700 text-sm font-semibold rounded-lg hover:bg-yellow-50">크레딧 {credits !== null ? `${credits}C` : ''}</Link>
-              <Link href="/create" className="block px-4 py-2.5 text-blue-600 text-sm font-semibold rounded-lg hover:bg-blue-50">+ 웹툰 만들기</Link>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="block w-full text-left px-4 py-2.5 text-red-400 text-sm font-medium rounded-lg hover:bg-red-50"
-              >
-                로그아웃
-              </button>
-            </>
-          ) : (
-            <Link href="/login" className="block px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-lg text-center">로그인</Link>
-          )}
-        </div>
+      {/* 모바일 하단 네비게이션 바 */}
+      {session?.user && (
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 safe-area-bottom">
+          <div className="flex items-center justify-around py-2">
+            <Link href="/" className={`flex flex-col items-center gap-0.5 px-3 py-1 ${pathname === '/' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v10h-5v-6H11v6H6V11H3l9-8z"/></svg>
+              <span className="text-[10px] font-medium">홈</span>
+            </Link>
+            <Link href="/create" className={`flex flex-col items-center gap-0.5 px-3 py-1 ${pathname === '/create' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4v16m8-8H4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/></svg>
+              <span className="text-[10px] font-medium">만들기</span>
+            </Link>
+            <Link href="/projects" className={`flex flex-col items-center gap-0.5 px-3 py-1 ${pathname === '/projects' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+              <span className="text-[10px] font-medium">내 작품</span>
+            </Link>
+            <Link href="/settings" className={`flex flex-col items-center gap-0.5 px-3 py-1 ${pathname === '/settings' ? 'text-blue-600' : 'text-gray-400'}`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+              <span className="text-[10px] font-medium">내 정보</span>
+            </Link>
+          </div>
+        </nav>
       )}
     </header>
   );
