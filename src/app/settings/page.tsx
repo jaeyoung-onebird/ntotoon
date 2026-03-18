@@ -50,7 +50,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-6 py-12">
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-8 sm:py-12">
       <h1 className="text-2xl font-bold text-gray-900 mb-8">내 정보 수정</h1>
 
       <div className="space-y-5">

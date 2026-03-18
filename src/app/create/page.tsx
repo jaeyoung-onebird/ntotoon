@@ -98,13 +98,13 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 pt-16 pb-24">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-24">
       {/* Hero */}
       <div className="text-center mb-14">
         <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-sm font-medium mb-6">
           AI 웹툰 생성기
         </div>
-        <h1 className="text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+        <h1 className="text-3xl sm:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
           내 이야기를 <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">웹툰</span>으로
         </h1>
         <p className="text-lg text-gray-500 max-w-md mx-auto">
@@ -132,7 +132,7 @@ export default function CreatePage() {
           <label className="block text-sm font-medium text-gray-700 mb-3">
             그림체 선택
           </label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {STYLE_PRESETS.map((style) => (
               <button
                 key={style.key}
@@ -256,7 +256,7 @@ export default function CreatePage() {
       </form>
 
       {/* Steps */}
-      <div className="mt-16 grid grid-cols-4 gap-3">
+      <div className="mt-10 sm:mt-16 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { step: '1', title: '텍스트 분석', desc: '장면과 캐릭터 추출' },
           { step: '2', title: '캐릭터 디자인', desc: '일관된 외형 생성' },

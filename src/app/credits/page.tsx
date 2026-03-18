@@ -127,7 +127,7 @@ export default function CreditsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="max-w-3xl mx-auto px-6 py-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Balance Card */}
         <div className="bg-white rounded-2xl shadow-lg border border-blue-100 p-8 mb-8">
           <p className="text-sm font-medium text-blue-500 uppercase tracking-wider mb-2">내 크레딧</p>

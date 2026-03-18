@@ -40,7 +40,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 px-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg shadow-blue-100/50 border border-blue-100/60 p-8">
+        <div className="bg-white rounded-2xl shadow-lg shadow-blue-100/50 border border-blue-100/60 p-5 sm:p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900">로그인</h1>
             <p className="text-sm text-gray-500 mt-2">NtoTOON에 오신 것을 환영합니다</p>

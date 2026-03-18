@@ -357,7 +357,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
   const isOwner = session?.user && (session.user as { id?: string }).id === project.userId;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -589,7 +589,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
 
       {/* 공유하기 */}
       <div className="max-w-[600px] mx-auto mb-6">
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
           <button
             onClick={() => {
               const url = `${window.location.origin}/projects/${id}/episodes/${episodeNum}`;

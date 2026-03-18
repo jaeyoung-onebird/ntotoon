@@ -278,7 +278,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             {project.characters.map((char) => (
               <div
                 key={char.id}
-                className="flex-shrink-0 w-44 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                className="flex-shrink-0 w-36 sm:w-44 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="relative">
                   {char.referenceSheet ? (
