@@ -170,10 +170,10 @@ PANEL RULES:
 - PACING STRUCTURE (16 panels): Panels 1-3 (setup/hook), 4-7 (development), 8-11 (escalation), 12-14 (climax), 15-16 (cliffhanger). Each section must flow smoothly into the next.
 - scene_description: English only, NO text/signs/readable content in descriptions (write "blank sign", "illegible poster")
 - Vary camera angles constantly — minimum 4 different angles per episode
-- SILENCE PANELS: At least 2-3 panels per episode MUST have "dialogues": [] (empty array). No speech, no narration, no sfx. Just the image. A character staring at a phone screen, hands clenched — silence says more than words. These panels create dramatic pacing.
-- Dialogue: natural Korean, emotionally resonant, MAX 30 characters per bubble (shorter is better). Use thought bubbles sparingly for key inner voice moments only.
-- Do NOT put narration on every panel. Narration should be rare — only for time skips or critical emotional beats (max 2-3 per episode).
-- Each panel should have at most 2 dialogue bubbles. Less is more.
+- SILENCE PANELS: 1-2 panels per episode should have "dialogues": [] (empty array) for dramatic impact. Use these at emotional peaks where silence speaks louder than words.
+- Dialogue: natural Korean, emotionally resonant, MAX 35 characters per bubble. Most panels SHOULD have dialogue — readers need to understand the story through conversation and narration.
+- Use narration for context, inner thoughts, and transitions. 3-5 narration boxes per episode is ideal.
+- Each panel can have 1-3 dialogue bubbles. Ensure the story is clearly told through dialogue — the reader should never be confused about what's happening.
 - Use narration boxes for time skips or emotional inner voice (type: "narration")
 - SFX for dramatic sound moments (type: "sfx", text: "쾅", "탁", "띠링~")
 

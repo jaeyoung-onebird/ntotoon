@@ -4,6 +4,8 @@ import { getStylePreset } from '@/lib/styles';
 
 const NO_TEXT_SUFFIX = `NO TEXT: Zero letters, numbers, words, signs, labels, watermarks in any language. Signs/labels must be blank or illegible.`;
 
+const STYLE_CONSISTENCY = `STYLE CONSISTENCY: EVERY element in this image must be in the SAME art style — main characters, background characters, vehicles, buildings, ALL must be drawn in Korean manhwa/webtoon style. NEVER mix realistic/photographic rendering with anime. Background people must be drawn as simplified manhwa characters, NOT realistic humans. Everything is illustration, nothing is photographic.`;
+
 // ---------------------------------------------------------------------------
 // Character sheet
 // ---------------------------------------------------------------------------
@@ -157,6 +159,8 @@ Scene: ${panel.scene_description}
 ${characterLines}
 
 ${bg} ${mood}
+
+${STYLE_CONSISTENCY}
 
 ${NO_TEXT_SUFFIX}`;
 }
