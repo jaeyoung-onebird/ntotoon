@@ -390,7 +390,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
               <button onClick={() => setEditingTitle(false)} className="text-sm text-gray-400 hover:text-gray-600">취소</button>
             </div>
           ) : (
-            <h1 className="text-2xl font-bold text-gray-900">{episodeNum}화{episode?.title ? ` - ${episode.title}` : ''}</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{episodeNum}화{episode?.title ? ` - ${episode.title.replace(/^\d+화[:\s]*/,'')}` : ''}</h1>
           )}
         </div>
         {isOwner && !isGenerating && (
@@ -523,7 +523,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           <div className="max-w-[600px] mx-auto">
             <div className="text-center py-6 mb-4">
               <p className="text-sm text-blue-500 font-semibold mb-1">제 {episodeNum}화</p>
-              <h2 className="text-2xl font-bold text-gray-900">{episode.title || project.title}</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{(episode.title || project.title).replace(/^\d+화[:\s]*/,'')}</h2>
             </div>
           </div>
           <div className="max-w-[600px] mx-auto space-y-4">
