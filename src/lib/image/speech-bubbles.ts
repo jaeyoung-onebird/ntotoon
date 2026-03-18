@@ -140,7 +140,7 @@ function findPosition(
     }
   }
 
-  y = Math.min(y, imgH * 0.35 - h);
+  y = Math.min(y, imgH * 0.30 - h); // 상단 30% 이내에 배치 (얼굴 가림 방지)
   y = Math.max(margin, y);
   x = Math.max(margin, Math.min(x, imgW - w - margin));
 

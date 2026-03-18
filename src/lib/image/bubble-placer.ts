@@ -48,26 +48,32 @@ export async function calculateBubblePlacements(
           },
           {
             type: 'text',
-            text: `You are a webtoon speech bubble placement expert. Analyze this webtoon panel image and determine the optimal position for each speech bubble.
+            text: `You are a webtoon speech bubble placement expert. Analyze this image and find the best position for each speech bubble.
 
 Dialogues to place:
 ${dialogueList}
 
-Rules:
-- Place speech bubbles near the speaking character's head, in empty space
-- Don't cover character faces or important visual elements
-- speech type: place near character with tail pointing to them
-- thought type: place near character with cloud dots
-- narration type: place at top or bottom edge of the panel
-- sfx type: place near the action/sound source
-- x,y are 0-1 ratios (0,0 = top-left, 1,1 = bottom-right)
-- tailDirection: which direction the bubble tail should point
+STRICT RULES:
+1. NEVER cover any character's face, head, or upper body. This is the #1 rule.
+2. First, identify where all character faces are in the image. Then place bubbles AWAY from those areas.
+3. Prefer these safe zones (in priority order):
+   - Top corners of the panel (y: 0.03-0.12)
+   - Empty sky/ceiling/wall areas above characters
+   - Sides of the panel where no characters exist
+   - Bottom corners (only for narration)
+4. speech type: place ABOVE and to the side of the speaker's head, never overlapping the face. Use tailDirection to point toward the speaker.
+5. thought type: place above character with "up" tail direction
+6. narration type: place at very top (y: 0.03-0.08) or very bottom (y: 0.90-0.97) edge
+7. sfx type: place near the action source, away from faces
+8. x,y are 0-1 ratios (0,0 = top-left, 1,1 = bottom-right)
+9. Keep bubbles in upper 40% of the image (y < 0.4) whenever possible
+10. If two characters are talking, place their bubbles on opposite sides (left vs right)
 
 Respond ONLY in JSON array:
 \`\`\`json
 [
-  {"index": 0, "x": 0.3, "y": 0.15, "tailDirection": "down"},
-  {"index": 1, "x": 0.7, "y": 0.1, "tailDirection": "down"}
+  {"index": 0, "x": 0.25, "y": 0.06, "tailDirection": "down"},
+  {"index": 1, "x": 0.75, "y": 0.06, "tailDirection": "down"}
 ]
 \`\`\``,
           },
@@ -115,14 +121,14 @@ Respond ONLY in JSON array:
   }
 }
 
-// Claude 실패 시 기본 배치
+// Claude 실패 시 기본 배치 (상단에 배치하여 얼굴 안 가림)
 function fallbackPlacements(dialogues: DialogueData[]): BubblePlacement[] {
   return dialogues.map((d, i) => ({
     speaker: d.speaker,
     text: d.text,
     type: d.type,
-    x: i % 2 === 0 ? 0.25 : 0.75,
-    y: d.type === 'narration' ? 0.08 : 0.12 + i * 0.12,
+    x: i % 2 === 0 ? 0.22 : 0.78,
+    y: d.type === 'narration' ? 0.04 : 0.05 + i * 0.08,
     tailDirection: 'down' as const,
   }));
 }
