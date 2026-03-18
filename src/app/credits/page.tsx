@@ -27,6 +27,8 @@ export default function CreditsPage() {
   const [logs, setLogs] = useState<CreditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [charging, setCharging] = useState<number | null>(null);
+  const [attendance, setAttendance] = useState<{ checkedIn: boolean; streak: number; reward: number } | null>(null);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   const fetchCredits = useCallback(async () => {
     try {
@@ -42,9 +44,28 @@ export default function CreditsPage() {
   }, []);
 
   useEffect(() => {
-    if (status === 'authenticated') fetchCredits();
+    if (status === 'authenticated') {
+      fetchCredits();
+      fetch('/api/attendance').then(r => r.json()).then(setAttendance).catch(() => {});
+    }
     else if (status === 'unauthenticated') setLoading(false);
   }, [status, fetchCredits]);
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      const res = await fetch('/api/attendance', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendance(prev => prev ? { ...prev, checkedIn: true, streak: (prev.streak || 0) + 1 } : prev);
+        setCredits(data.balance);
+        alert(`출석 완료! ${data.reward}C 지급되었습니다.`);
+      } else if (res.status === 409) {
+        alert('오늘은 이미 출석했습니다!');
+      }
+    } catch { alert('출석체크 실패'); }
+    finally { setCheckingIn(false); }
+  };
 
   const handleCharge = async (amount: number, price: number) => {
     if (!session?.user) return;
@@ -135,7 +156,22 @@ export default function CreditsPage() {
             <span className="text-5xl font-bold text-blue-700">{credits.toLocaleString()}</span>
             <span className="text-2xl font-semibold text-blue-400">C</span>
           </div>
-          <p className="text-sm text-gray-400 mt-2">1 크레딧 = 100원 · 에피소드 1편 생성 = 10C</p>
+          <p className="text-sm text-gray-400 mt-2">1 크레딧 = 100원 · 에피소드 1편 생성 = 25C</p>
+          {/* 출석체크 */}
+          {attendance && !attendance.checkedIn && (
+            <button
+              onClick={handleCheckIn}
+              disabled={checkingIn}
+              className="mt-4 w-full py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl hover:bg-yellow-300 disabled:opacity-50 transition-all text-sm"
+            >
+              {checkingIn ? '출석 중...' : `출석체크 +${attendance.reward}C 받기`}
+            </button>
+          )}
+          {attendance?.checkedIn && (
+            <div className="mt-4 w-full py-3 bg-gray-100 text-gray-500 font-semibold rounded-xl text-center text-sm">
+              오늘 출석 완료 {attendance.streak > 1 && `(${attendance.streak}일 연속)`}
+            </div>
+          )}
         </div>
 
         {/* Charge Presets */}
