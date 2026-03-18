@@ -230,9 +230,9 @@ export default function Header() {
           <Link href={session?.user ? "/credits" : "/login"} className={`flex flex-col items-center gap-0.5 py-1.5 ${pathname === '/credits' ? 'text-blue-600' : 'text-gray-400'}`}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="9"/>
-              <path d="M14.5 9a2.5 2.5 0 00-5 0c0 1.5 2.5 2 2.5 3.5M12 16h.01"/>
+              <path d="M9 12h6M12 9v6"/>
             </svg>
-            <span className="text-[9px] font-medium">크레딧</span>
+            <span className="text-[9px] font-medium">{credits !== null ? `${credits}C` : 'C'}</span>
           </Link>
           {/* 내 정보 */}
           <Link href={session?.user ? "/settings" : "/login"} className={`flex flex-col items-center gap-0.5 py-1.5 ${pathname === '/settings' ? 'text-blue-600' : 'text-gray-400'}`}>
