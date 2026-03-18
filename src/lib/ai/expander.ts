@@ -15,10 +15,20 @@ export async function expandText(
     ? `\n이전 에피소드:\n${prevEpisodes.map(e => `${e.number}화: ${e.summary || ''}`).join('\n')}`
     : '';
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
-    system: `당신은 웹툰 원작 소설을 집필하는 전문 작가입니다.
+  const MAX_RETRIES = 3;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+        console.log(`[Expander] 재시도 ${attempt}/${MAX_RETRIES} (${delay}ms 대기)`);
+        await new Promise(r => setTimeout(r, delay));
+      }
+
+      const response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 8192,
+        system: `당신은 웹툰 원작 소설을 집필하는 전문 작가입니다.
 작가가 제공한 텍스트가 아무리 짧거나 허술해도, 반드시 웹툰 한 화 분량(18컷을 만들 수 있는 분량)의 완성된 소설 텍스트를 만들어냅니다.
 ⚠️ 절대 규칙: 1500자 이내로 작성. 이 규칙을 어기면 안 됩니다. 짧고 강렬하게. 긴 서술 금지. 대화 위주로 쓰되, 핵심 장면만 골라서 압축.
 - 입력이 한 문장이어도 OK — 장르/상황을 파악해 자연스럽게 확장
@@ -28,13 +38,21 @@ export async function expandText(
 - 웹툰 특유의 극적 연출(침묵 컷, 클로즈업 순간, 리액션)을 고려한 장면 배치
 - 원래 스토리 의도는 절대 변경하지 않음
 - 출력은 소설 텍스트만. 제목, 설명, 메타 정보 없이.`,
-    messages: [{
-      role: 'user',
-      content: `${charContext}${prevContext}\n\n⚠️ 입력 텍스트가 매우 짧습니다. 스토리 의도를 유지하면서 웹툰 한 화 분량으로 대폭 확장해주세요.\n\n원본:\n${text}`,
-    }],
-  });
+        messages: [{
+          role: 'user',
+          content: `${charContext}${prevContext}\n\n⚠️ 입력 텍스트가 매우 짧습니다. 스토리 의도를 유지하면서 웹툰 한 화 분량으로 대폭 확장해주세요.\n\n원본:\n${text}`,
+        }],
+      });
 
-  const content = response.content[0];
-  if (content.type !== 'text') return text;
-  return content.text;
+      const content = response.content[0];
+      if (content.type !== 'text') return text;
+      return content.text;
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      if (status && status >= 400 && status < 500 && status !== 429) throw err;
+      if (attempt === MAX_RETRIES - 1) throw err;
+    }
+  }
+
+  return text;
 }
