@@ -4,9 +4,15 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3
 
 const STORAGE_DIR = path.join(process.cwd(), 'public', 'uploads');
 const USE_S3 = !!process.env.S3_BUCKET_NAME;
+const CLOUDFRONT_URL = process.env.CLOUDFRONT_URL || '';
 
 const s3 = USE_S3
-  ? new S3Client({ region: process.env.AWS_REGION || 'ap-northeast-2' })
+  ? new S3Client({
+      region: process.env.AWS_REGION || 'ap-northeast-2',
+      credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        ? { accessKeyId: process.env.AWS_ACCESS_KEY_ID, secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY }
+        : undefined,
+    })
   : null;
 
 async function ensureDir(dirPath: string) {
@@ -23,6 +29,9 @@ export async function uploadToS3(buffer: Buffer, key: string, contentType = 'ima
         ContentType: contentType,
       }),
     );
+    if (CLOUDFRONT_URL) {
+      return `${CLOUDFRONT_URL}/${key}`;
+    }
     return `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
   }
 
@@ -57,6 +66,9 @@ export async function downloadFromS3(key: string): Promise<Buffer> {
 
 export async function getSignedDownloadUrl(key: string): Promise<string> {
   if (USE_S3) {
+    if (CLOUDFRONT_URL) {
+      return `${CLOUDFRONT_URL}/${key}`;
+    }
     return `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
   }
   return `/uploads/${key}`;
