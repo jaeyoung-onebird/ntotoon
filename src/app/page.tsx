@@ -85,14 +85,20 @@ export default function FeedPage() {
       {/* 상단 배너 */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
+              <Link
+                href={session?.user ? "/create" : "/login"}
+                className="inline-block px-4 sm:px-6 py-2 sm:py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg text-sm sm:text-base whitespace-nowrap mb-3 sm:hidden"
+              >
+                + 웹툰 만들기
+              </Link>
               <h1 className="text-xl sm:text-3xl font-extrabold mb-1 sm:mb-2">내 이야기를 웹툰으로</h1>
               <p className="text-blue-200 text-xs sm:text-sm">이야기만 쓰면 AI가 웹툰으로 만들어드려요.</p>
             </div>
             <Link
               href={session?.user ? "/create" : "/login"}
-              className="px-4 sm:px-6 py-2 sm:py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg text-sm sm:text-base whitespace-nowrap self-end sm:self-auto"
+              className="hidden sm:inline-block px-6 py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg whitespace-nowrap"
             >
               + 웹툰 만들기
             </Link>
