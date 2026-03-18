@@ -17,9 +17,9 @@ try {
   console.warn('Korean font not found, using system fallback');
 }
 
-const FONT = 'bold 26px "NanumSquareRound", "Apple SD Gothic Neo", sans-serif';
-const NARRATION_FONT = '22px "NanumSquareRound", "Apple SD Gothic Neo", sans-serif';
-const SFX_FONT = 'bold 40px "NanumSquareRound", "Apple SD Gothic Neo", sans-serif';
+const FONT = 'bold 26px NanumSquareRound';
+const NARRATION_FONT = '22px NanumSquareRound';
+const SFX_FONT = 'bold 40px NanumSquareRound';
 
 const MAX_LINE_WIDTH = 240;
 const PADDING = 16;
@@ -71,12 +71,23 @@ export async function addSpeechBubbles(
     const pos = findPosition(bubbleW, bubbleH, W, H, placed, i, isNarration, dialogues.length, d.positionX ?? undefined, d.positionY ?? undefined);
     placed.push(pos);
 
+    // 대사 내용에 따라 말풍선 스타일 분기
+    const text = d.text;
+    const isShout = text.includes('!') && (text.match(/!/g) || []).length >= 1 && text.length < 20;
+    const isWhisper = text.includes('...') || text.includes('…');
+    const isQuestion = text.endsWith('?') && text.length < 25;
+
     if (isNarration) {
       drawNarrationBox(ctx, pos, lines);
     } else if (isThought) {
       drawThoughtBubble(ctx, pos, lines);
+    } else if (isShout) {
+      // 소리치는 대사 → 뾰족한 말풍선
+      drawShoutBubble(ctx, pos, lines, H);
+    } else if (isWhisper) {
+      // 속삭이는/망설이는 대사 → 점선 말풍선
+      drawWhisperBubble(ctx, pos, lines, H);
     } else if (lines.length === 1 && lines[0].length <= 8) {
-      // 짧은 대사 → 동그란 말풍선
       drawRoundBubble(ctx, pos, lines);
     } else {
       drawSpeechBubble(ctx, pos, lines, H);
@@ -140,7 +151,7 @@ function findPosition(
     }
   }
 
-  y = Math.min(y, imgH * 0.30 - h); // 상단 30% 이내에 배치 (얼굴 가림 방지)
+  y = Math.min(y, imgH * 0.25 - h); // 상단 25% 이내에 배치 (얼굴 가림 방지)
   y = Math.max(margin, y);
   x = Math.max(margin, Math.min(x, imgW - w - margin));
 
@@ -311,7 +322,7 @@ function drawThoughtBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines
   }
 
   // 텍스트 (기울임)
-  ctx.font = '24px "NanumSquareRound", sans-serif';
+  ctx.font = '24px NanumSquareRound';
   ctx.fillStyle = '#555566';
   ctx.textAlign = 'center';
   lines.forEach((line, i) => {
@@ -344,6 +355,100 @@ function drawNarrationBox(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines:
   ctx.textAlign = 'center';
   lines.forEach((line, i) => {
     ctx.fillText(line, x + w / 2 + 4, y + PADDING + (i + 1) * (LINE_HEIGHT - 4) - 4);
+  });
+  ctx.textAlign = 'left';
+}
+
+// 소리치는 대사 — 뾰족뾰족 말풍선
+function drawShoutBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: string[], imgH: number) {
+  const { x, y, w, h } = pos;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const rx = w / 2 + 14;
+  const ry = h / 2 + 10;
+  const spikes = 12;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.25)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 3;
+
+  // 뾰족한 별 모양
+  ctx.beginPath();
+  for (let i = 0; i <= spikes * 2; i++) {
+    const angle = (i * Math.PI) / spikes - Math.PI / 2;
+    const r = i % 2 === 0 ? 1.0 : 0.82;
+    ctx.lineTo(cx + Math.cos(angle) * rx * r, cy + Math.sin(angle) * ry * r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = '#111111';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i <= spikes * 2; i++) {
+    const angle = (i * Math.PI) / spikes - Math.PI / 2;
+    const r = i % 2 === 0 ? 1.0 : 0.82;
+    ctx.lineTo(cx + Math.cos(angle) * rx * r, cy + Math.sin(angle) * ry * r);
+  }
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.font = 'bold 28px NanumSquareRound';
+  ctx.fillStyle = '#111111';
+  ctx.textAlign = 'center';
+  lines.forEach((line, i) => {
+    ctx.fillText(line, cx, cy + (i - (lines.length - 1) / 2) * LINE_HEIGHT + 8);
+  });
+  ctx.textAlign = 'left';
+}
+
+// 속삭이는/망설이는 대사 — 점선 테두리 말풍선
+function drawWhisperBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: string[], imgH: number) {
+  const { x, y, w, h } = pos;
+  const r = 22;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.1)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = '#fafafa';
+  ctx.fill();
+  ctx.restore();
+
+  // 점선 테두리
+  ctx.strokeStyle = '#888888';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  roundRect(ctx, x, y, w, h, r);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 곡선 꼬리
+  const tailDown = imgH ? (y + h / 2) < imgH * 0.6 : true;
+  const tailBaseX = x + w * 0.35;
+  ctx.fillStyle = '#fafafa';
+  ctx.strokeStyle = '#888888';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  if (tailDown) {
+    ctx.beginPath();
+    ctx.moveTo(tailBaseX, y + h - 2);
+    ctx.quadraticCurveTo(tailBaseX - 4, y + h + 14, tailBaseX - 12, y + h + 16);
+    ctx.quadraticCurveTo(tailBaseX + 2, y + h + 8, tailBaseX + 10, y + h - 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  ctx.font = '24px NanumSquareRound';
+  ctx.fillStyle = '#666666';
+  ctx.textAlign = 'center';
+  lines.forEach((line, i) => {
+    ctx.fillText(line, x + w / 2, y + PADDING + (i + 1) * LINE_HEIGHT - 6);
   });
   ctx.textAlign = 'left';
 }

@@ -50,7 +50,7 @@ export default function RootLayout({
                   <Link href="/privacy" className="hover:text-gray-600 transition-colors">개인정보처리방침</Link>
                 </div>
               </div>
-              <span className="text-[11px] text-gray-300">Ver. 1.112</span>
+              <span className="text-[11px] text-gray-300">Ver. 1.117</span>
             </div>
           </footer>
         </AuthProvider>
