@@ -442,7 +442,19 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
         <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium text-gray-700">{progress.message}</span>
-            <span className="text-sm font-semibold text-blue-600">{Math.round(progress.progress)}%</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-blue-600">{Math.round(progress.progress)}%</span>
+              <button
+                onClick={async () => {
+                  if (!confirm('생성을 중단하시겠습니까? 이미 만든 패널은 유지됩니다.')) return;
+                  await fetch(`/api/projects/${id}/generate`, { method: 'DELETE' });
+                  window.location.reload();
+                }}
+                className="px-2.5 py-1 text-[11px] text-red-400 border border-red-200 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all"
+              >
+                중단
+              </button>
+            </div>
           </div>
           {eta && (
             <p className="text-xs text-gray-400 mb-2">{eta}</p>
@@ -457,7 +469,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           {logs.length > 0 && (
             <div className="led-panel rounded-lg p-3 max-h-40 overflow-y-auto border border-white/10" style={{ boxShadow: '0 0 20px rgba(255,255,255,0.03) inset' }}>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ boxShadow: '0 0 8px #fff, 0 0 16px rgba(255,255,255,0.4)' }} />
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ boxShadow: '0 0 8px #4ade80, 0 0 16px rgba(74,222,128,0.4)' }} />
                 <span className="text-[10px] text-white/80 font-mono tracking-widest uppercase">System Log</span>
               </div>
               {logs.map((log, i) => (

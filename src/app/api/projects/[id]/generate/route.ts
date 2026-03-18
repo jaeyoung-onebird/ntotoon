@@ -109,3 +109,36 @@ export async function POST(
     return NextResponse.json({ error: 'Failed to start generation' }, { status: 500 });
   }
 }
+
+// DELETE — 생성 중단
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const { id } = await params;
+
+    // RUNNING 잡 → FAILED로 변경
+    await prisma.job.updateMany({
+      where: { projectId: id, status: 'RUNNING' },
+      data: { status: 'FAILED', error: '사용자가 중단함', completedAt: new Date() },
+    });
+
+    // 프로젝트 상태 → FAILED
+    await prisma.project.update({
+      where: { id },
+      data: { status: 'FAILED' },
+    });
+
+    // Redis로 중단 알림 (SSE 클라이언트에 전달)
+    await redis.publish(`pipeline:stop:${id}`, 'stop');
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to stop' }, { status: 500 });
+  }
+}
