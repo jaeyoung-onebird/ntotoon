@@ -152,46 +152,44 @@ function rectsOverlap(a: BubbleRect, b: BubbleRect): boolean {
            a.y + a.h + 5 < b.y || b.y + b.h + 5 < a.y);
 }
 
+// 짧은 대사 — 볼록한 둥근 말풍선 + 곡선 꼬리
 function drawRoundBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: string[]) {
   const { x, y, w, h } = pos;
   const cx = x + w / 2;
   const cy = y + h / 2;
-  const rx = Math.max(w, h) / 2 + 8;
-  const ry = rx;
+  const rx = Math.max(w, h) / 2 + 12;
+  const ry = rx * 0.85;
 
+  // 그림자
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.12)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetX = 1;
-  ctx.shadowOffsetY = 2;
-
-  // 원형 말풍선
+  ctx.shadowColor = 'rgba(0,0,0,0.18)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 3;
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.restore();
 
-  ctx.strokeStyle = '#333333';
-  ctx.lineWidth = 2;
+  // 테두리
+  ctx.strokeStyle = '#222222';
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.stroke();
 
-  // 꼬리 (작은 삼각형)
-  ctx.beginPath();
-  ctx.moveTo(cx - 5, cy + ry - 2);
-  ctx.lineTo(cx - 2, cy + ry + 10);
-  ctx.lineTo(cx + 5, cy + ry - 2);
+  // 곡선 꼬리
+  ctx.save();
   ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  ctx.strokeStyle = '#333333';
-  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(cx - 5, cy + ry - 2);
-  ctx.lineTo(cx - 2, cy + ry + 10);
-  ctx.lineTo(cx + 5, cy + ry - 2);
+  ctx.moveTo(cx - 4, cy + ry - 4);
+  ctx.quadraticCurveTo(cx - 8, cy + ry + 16, cx - 14, cy + ry + 14);
+  ctx.quadraticCurveTo(cx - 4, cy + ry + 8, cx + 6, cy + ry - 4);
+  ctx.fill();
+  ctx.strokeStyle = '#222222';
+  ctx.lineWidth = 2.5;
   ctx.stroke();
+  ctx.restore();
 
   // 텍스트
   ctx.font = FONT;
@@ -203,58 +201,55 @@ function drawRoundBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: 
   ctx.textAlign = 'left';
 }
 
+// 일반 대사 — 부드러운 모서리 + 곡선 꼬리
 function drawSpeechBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: string[], imgH?: number) {
   const { x, y, w, h } = pos;
-  const r = BUBBLE_RADIUS;
-  // 말풍선이 상단에 있으면 꼬리를 아래로, 하단이면 위로
+  const r = 24;
   const tailDown = imgH ? (y + h / 2) < imgH * 0.6 : true;
-  const tailX1 = x + w * 0.4;
-  const tailX2 = x + w * 0.45;
-  const tailX3 = x + w * 0.55;
-  const tailLen = 14;
 
+  // 그림자
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.15)';
-  ctx.shadowBlur = 8;
-  ctx.shadowOffsetX = 2;
-  ctx.shadowOffsetY = 2;
-
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  if (tailDown) {
-    // 꼬리 아래
-    ctx.lineTo(tailX3, y + h);
-    ctx.lineTo(tailX2, y + h + tailLen);
-    ctx.lineTo(tailX1, y + h);
-  } else {
-    ctx.lineTo(x + r, y + h);
-  }
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  if (!tailDown) {
-    // 꼬리 위
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.lineTo(tailX1, y);
-    ctx.lineTo(tailX2, y - tailLen);
-    ctx.lineTo(tailX3, y);
-  } else {
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-  }
-  ctx.closePath();
-
+  ctx.shadowColor = 'rgba(0,0,0,0.2)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetY = 4;
+  roundRect(ctx, x, y, w, h, r);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.restore();
 
-  ctx.strokeStyle = '#333333';
-  ctx.lineWidth = 2;
+  // 테두리
+  ctx.strokeStyle = '#222222';
+  ctx.lineWidth = 2.5;
+  roundRect(ctx, x, y, w, h, r);
   ctx.stroke();
 
+  // 곡선 꼬리 (S자 형태)
+  ctx.save();
+  const tailBaseX = x + w * 0.35;
+  if (tailDown) {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(tailBaseX, y + h - 2);
+    ctx.quadraticCurveTo(tailBaseX - 6, y + h + 18, tailBaseX - 16, y + h + 20);
+    ctx.quadraticCurveTo(tailBaseX + 2, y + h + 12, tailBaseX + 14, y + h - 2);
+    ctx.fill();
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(tailBaseX, y + 2);
+    ctx.quadraticCurveTo(tailBaseX - 6, y - 18, tailBaseX - 16, y - 20);
+    ctx.quadraticCurveTo(tailBaseX + 2, y - 12, tailBaseX + 14, y + 2);
+    ctx.fill();
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 텍스트
   ctx.font = FONT;
   ctx.fillStyle = '#111111';
   ctx.textAlign = 'center';
@@ -264,77 +259,115 @@ function drawSpeechBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines:
   ctx.textAlign = 'left';
 }
 
+// 생각 말풍선 — 구름 모양 + 동그라미 꼬리
 function drawThoughtBubble(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: string[]) {
   const { x, y, w, h } = pos;
-  const r = 24;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
 
+  // 구름 형태 (여러 원 합성)
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.1)';
-  ctx.shadowBlur = 6;
-  roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = '#f8f8ff';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = '#f0f0ff';
+  ctx.beginPath();
+  const rx = w / 2 + 10;
+  const ry = h / 2 + 6;
+  // 메인 타원
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // 구름 볼록한 부분들
+  ctx.beginPath();
+  ctx.arc(cx - rx * 0.5, cy - ry * 0.6, ry * 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx + rx * 0.4, cy - ry * 0.5, ry * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx - rx * 0.3, cy + ry * 0.5, ry * 0.35, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  ctx.strokeStyle = '#999999';
+  // 테두리
+  ctx.strokeStyle = '#aaaacc';
   ctx.lineWidth = 1.5;
-  ctx.setLineDash([6, 4]);
-  roundRect(ctx, x, y, w, h, r);
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.setLineDash([]);
 
+  // 동그라미 꼬리 (3개)
   for (let i = 0; i < 3; i++) {
-    const dotR = 5 - i * 1.5;
+    const dotR = 7 - i * 2;
+    const dotX = cx - rx * 0.3 - i * 12;
+    const dotY = cy + ry + 6 + i * 10;
     ctx.beginPath();
-    ctx.arc(x + w * 0.4 - i * 10, y + h + 8 + i * 10, dotR, 0, Math.PI * 2);
-    ctx.fillStyle = '#f8f8ff';
+    ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = '#f0f0ff';
     ctx.fill();
-    ctx.strokeStyle = '#999999';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#aaaacc';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
   }
 
-  ctx.font = FONT.replace('bold', 'italic');
-  ctx.fillStyle = '#444444';
+  // 텍스트 (기울임)
+  ctx.font = '24px "NanumSquareRound", sans-serif';
+  ctx.fillStyle = '#555566';
   ctx.textAlign = 'center';
   lines.forEach((line, i) => {
-    ctx.fillText(line, x + w / 2, y + PADDING + (i + 1) * LINE_HEIGHT - 6);
+    ctx.fillText(line, cx, cy + (i - (lines.length - 1) / 2) * LINE_HEIGHT + 8);
   });
   ctx.textAlign = 'left';
 }
 
+// 나레이션 — 반투명 다크 바
 function drawNarrationBox(ctx: CanvasRenderingContext2D, pos: BubbleRect, lines: string[]) {
   const { x, y, w, h } = pos;
 
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-  roundRect(ctx, x, y, w, h, 12);
+  // 배경 (반투명 다크, 부드러운 모서리)
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = 'rgba(20, 20, 30, 0.82)';
+  roundRect(ctx, x, y, w, h, 8);
+  ctx.fill();
+  ctx.restore();
+
+  // 좌측 강조선
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  roundRect(ctx, x + 4, y + 6, 3, h - 12, 2);
   ctx.fill();
 
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, x + 1, y + 1, w - 2, h - 2, 11);
-  ctx.stroke();
-
+  // 텍스트
   ctx.font = NARRATION_FONT;
-  ctx.fillStyle = '#eeeeee';
+  ctx.fillStyle = '#f0f0f0';
   ctx.textAlign = 'center';
   lines.forEach((line, i) => {
-    ctx.fillText(line, x + w / 2, y + PADDING + (i + 1) * (LINE_HEIGHT - 4) - 4);
+    ctx.fillText(line, x + w / 2 + 4, y + PADDING + (i + 1) * (LINE_HEIGHT - 4) - 4);
   });
   ctx.textAlign = 'left';
 }
 
+// 효과음 — 굵고 역동적인 외곽선 텍스트
 function drawSfx(ctx: CanvasRenderingContext2D, text: string, imgW: number, imgH: number, index: number) {
   const x = imgW * 0.3 + (index * 60) % (imgW * 0.4);
   const y = imgH * 0.4 + (index * 80) % (imgH * 0.3);
 
+  // 약간 기울어진 효과
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.1 + index * 0.05);
+
   ctx.font = SFX_FONT;
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 8;
   ctx.lineJoin = 'round';
-  ctx.strokeText(text, x, y);
+  // 외곽선 (두꺼운 흰색)
+  ctx.strokeStyle = '#ffffff';
+  ctx.strokeText(text, 0, 0);
+  // 내부 (빨간색)
   ctx.fillStyle = '#ee2222';
-  ctx.fillText(text, x, y);
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {

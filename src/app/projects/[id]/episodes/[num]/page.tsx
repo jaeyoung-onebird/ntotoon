@@ -472,21 +472,21 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           </div>
           {/* 메이킹 로그 */}
           {logs.length > 0 && (
-            <div className="led-panel rounded-lg p-3 max-h-40 overflow-y-auto border border-white/10" style={{ boxShadow: '0 0 20px rgba(255,255,255,0.03) inset' }}>
+            <div className="led-panel rounded-lg p-3 border border-white/10" style={{ boxShadow: '0 0 20px rgba(255,255,255,0.03) inset' }}>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ boxShadow: '0 0 8px #4ade80, 0 0 16px rgba(74,222,128,0.4)' }} />
                 <span className="text-[10px] text-white/80 font-mono tracking-widest uppercase">System Log</span>
               </div>
-              {logs.map((log, i) => (
+              {[...logs].reverse().slice(0, 3).map((log, i) => (
                 <p
                   key={i}
                   className="text-[11px] font-mono leading-relaxed"
                   style={{
-                    color: i === logs.length - 1 ? '#ffffff' : '#555555',
-                    textShadow: i === logs.length - 1 ? '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.3)' : 'none',
+                    color: i === 0 ? '#ffffff' : '#555555',
+                    textShadow: i === 0 ? '0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.3)' : 'none',
                   }}
                 >
-                  {i === logs.length - 1 ? '▸ ' : '  '}{log}
+                  {i === 0 ? '▸ ' : '  '}{log}
                 </p>
               ))}
             </div>
