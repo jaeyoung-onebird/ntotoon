@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import sharp from 'sharp';
 import type { DialogueData } from '@/types/scene';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
 interface BubblePlacement {
   speaker: string;
@@ -36,19 +36,7 @@ export async function calculateBubblePlacements(
   ).join('\n');
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: { type: 'base64', media_type: 'image/jpeg', data: resized.toString('base64') },
-          },
-          {
-            type: 'text',
-            text: `You are a webtoon speech bubble placement expert. Analyze this image and find the best position for each speech bubble.
+    const promptText = `You are a webtoon speech bubble placement expert. Analyze this image and find the best position for each speech bubble.
 
 Dialogues to place:
 ${dialogueList}
@@ -75,17 +63,21 @@ Respond ONLY in JSON array:
   {"index": 0, "x": 0.25, "y": 0.06, "tailDirection": "down"},
   {"index": 1, "x": 0.75, "y": 0.06, "tailDirection": "down"}
 ]
-\`\`\``,
-          },
-        ],
-      }],
+\`\`\``;
+
+    const response = await gemini.models.generateContent({
+      model: 'gemini-3.1-flash-lite',
+      contents: [
+        { inlineData: { mimeType: 'image/jpeg', data: resized.toString('base64') } },
+        { text: promptText },
+      ],
     });
 
-    const content = response.content[0];
-    if (content.type !== 'text') return fallbackPlacements(dialogues);
+    const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return fallbackPlacements(dialogues);
 
-    const jsonMatch = content.text.match(/```json\n?([\s\S]*?)\n?```/);
-    const jsonStr = jsonMatch ? jsonMatch[1] : content.text;
+    const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : text;
     const placements = JSON.parse(jsonStr) as Array<{ index: number; x: number; y: number; tailDirection: string }>;
 
     // 인덱스 범위 검증 + 대사 수와 배치 수 맞추기
