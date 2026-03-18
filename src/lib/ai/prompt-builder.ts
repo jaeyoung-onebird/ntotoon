@@ -6,6 +6,8 @@ const NO_TEXT_SUFFIX = `NO TEXT: Zero letters, numbers, words, signs, labels, wa
 
 const STYLE_CONSISTENCY = `STYLE CONSISTENCY: EVERY element in this image must be in the SAME art style — main characters, background characters, vehicles, buildings, ALL must be drawn in Korean manhwa/webtoon style. NEVER mix realistic/photographic rendering with anime. Background people must be drawn as simplified manhwa characters, NOT realistic humans. Everything is illustration, nothing is photographic.`;
 
+const ANATOMY_RULES = `ANATOMY: Every human must have exactly 2 arms, 2 legs, 5 fingers per hand. No extra limbs, no merged limbs, no impossible joint angles. When two characters sit together, clearly separate their legs — do NOT overlap or merge body parts. Hands must be drawn carefully with correct finger count.`;
+
 // ---------------------------------------------------------------------------
 // Character sheet
 // ---------------------------------------------------------------------------
@@ -161,6 +163,8 @@ ${characterLines}
 ${bg} ${mood}
 
 ${STYLE_CONSISTENCY}
+
+${ANATOMY_RULES}
 
 ${NO_TEXT_SUFFIX}`;
 }
