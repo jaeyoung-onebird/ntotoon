@@ -231,6 +231,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           }
           if (data.step === 'complete' || data.step === 'failed') {
             cleanup();
+            setProgress(null);
             setLivePanels([]);
             setLiveChars([]);
             fetchProject();
@@ -347,7 +348,11 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
   if (!project) return <div className="max-w-5xl mx-auto px-4 py-12 text-center text-gray-500">프로젝트를 찾을 수 없습니다</div>;
 
   const episode = project.episodes.find(ep => ep.number === episodeNum);
-  const isGenerating = progress && progress.step !== 'complete' && progress.step !== 'failed';
+  const isGenerating = progress
+    && progress.step !== 'complete'
+    && progress.step !== 'failed'
+    && project.status !== 'COMPLETED'
+    && project.status !== 'FAILED';
   const isLatestEpisode = episodeNum === Math.max(...project.episodes.map(e => e.number));
   const isOwner = session?.user && (session.user as { id?: string }).id === project.userId;
 
