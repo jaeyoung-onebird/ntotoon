@@ -30,14 +30,18 @@ async function resizeForQA(buffer: Buffer): Promise<Buffer> {
 async function loadImageBuffer(url: string): Promise<Buffer | null> {
   try {
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      // S3 public URL → key 추출
       const urlObj = new URL(url);
-      const key = urlObj.pathname.slice(1); // leading slash 제거
+      const key = decodeURIComponent(urlObj.pathname.slice(1));
       return await downloadFromS3(key);
     }
-    // 로컬 경로 (/uploads/... 형태)
+    // /cdn/ 프록시 경로 → S3 키 추출
+    if (url.startsWith('/cdn/')) {
+      const key = decodeURIComponent(url.slice('/cdn/'.length));
+      return await downloadFromS3(key);
+    }
+    // /uploads/ 로컬 경로
     const key = url.startsWith('/uploads/') ? url.slice('/uploads/'.length) : url.replace(/^\//, '');
-    return await downloadFromS3(key);
+    return await downloadFromS3(decodeURIComponent(key));
   } catch {
     return null;
   }
