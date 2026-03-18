@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 
 interface Panel {
@@ -33,8 +34,11 @@ interface Project {
 }
 
 export default function FeedPage() {
+  const { data: session } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [attendance, setAttendance] = useState<{ checkedIn: boolean; streak: number; reward: number } | null>(null);
+  const [checkingIn, setCheckingIn] = useState(false);
 
   useEffect(() => {
     fetch('/api/feed')
@@ -43,6 +47,27 @@ export default function FeedPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (session?.user) {
+      fetch('/api/attendance').then(r => r.json()).then(setAttendance).catch(console.error);
+    }
+  }, [session]);
+
+  const handleCheckIn = async () => {
+    setCheckingIn(true);
+    try {
+      const res = await fetch('/api/attendance', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendance(prev => prev ? { ...prev, checkedIn: true, streak: (prev.streak || 0) + 1 } : prev);
+        alert(`출석 완료! ${data.reward}C 지급 (잔액: ${data.balance}C)`);
+      } else if (res.status === 409) {
+        alert('이미 출석했습니다!');
+      }
+    } catch { alert('출석체크 실패'); }
+    finally { setCheckingIn(false); }
+  };
 
   if (loading) {
     return (
@@ -61,12 +86,28 @@ export default function FeedPage() {
             <h1 className="text-3xl font-extrabold mb-2">내 이야기를 웹툰으로</h1>
             <p className="text-blue-200 text-sm">이야기만 쓰면 AI가 웹툰으로 만들어드려요. 누구나 작가가 될 수 있습니다.</p>
           </div>
-          <Link
-            href="/create"
-            className="px-6 py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg"
-          >
-            + 웹툰 만들기
-          </Link>
+          <div className="flex items-center gap-3">
+            {session?.user && attendance && !attendance.checkedIn && (
+              <button
+                onClick={handleCheckIn}
+                disabled={checkingIn}
+                className="px-5 py-3 bg-yellow-400 text-yellow-900 font-bold rounded-xl hover:bg-yellow-300 disabled:opacity-50 transition-all shadow-lg animate-pulse"
+              >
+                {checkingIn ? '...' : `출석체크 +${attendance.reward}C`}
+              </button>
+            )}
+            {session?.user && attendance?.checkedIn && (
+              <div className="px-5 py-3 bg-white/20 backdrop-blur text-white font-semibold rounded-xl text-sm">
+                출석 완료 {attendance.streak > 1 && `(${attendance.streak}일 연속)`}
+              </div>
+            )}
+            <Link
+              href="/create"
+              className="px-6 py-3 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-all shadow-lg"
+            >
+              + 웹툰 만들기
+            </Link>
+          </div>
         </div>
       </div>
 
