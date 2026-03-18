@@ -1,9 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import { config } from '@/lib/config';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const gemini = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY! });
 
 export interface PreviousEpisodeContext {
   number: number;
@@ -36,29 +34,22 @@ ${text}
 IMPORTANT: This is a CONTINUATION. The first panel must naturally follow from the last scene of the previous episode. Do NOT re-introduce characters entering the scene if they were already present. Maintain exact same character appearances as listed above.`;
   }
 
-  const response = await anthropic.messages.create({
-    model: config.ai.analyzeModel,
-    max_tokens: 16000,
-    messages: [
-      {
-        role: 'user',
-        content: userMessage,
-      },
-    ],
-    system: NOVEL_ANALYSIS_SYSTEM_PROMPT,
+  const response = await gemini.models.generateContent({
+    model: 'gemini-3.1-flash-lite',
+    contents: [{ text: userMessage }],
+    config: { systemInstruction: NOVEL_ANALYSIS_SYSTEM_PROMPT, maxOutputTokens: 16000 },
   });
 
-  if (!response.content || response.content.length === 0) {
-    throw new Error('Claude API returned empty response');
+  const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!responseText || responseText.trim().length === 0) {
+    throw new Error('Gemini API returned empty response');
   }
-  const content = response.content[0];
-  if (content.type !== 'text') throw new Error('Unexpected response type');
 
   // Extract JSON from response
-  const jsonMatch = content.text.match(/```json\n?([\s\S]*?)\n?```/);
-  const jsonStr = jsonMatch ? jsonMatch[1] : content.text;
+  const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/);
+  const jsonStr = jsonMatch ? jsonMatch[1] : responseText;
   if (!jsonStr || jsonStr.trim().length === 0) {
-    throw new Error('Claude API returned empty text');
+    throw new Error('Gemini API returned empty text');
   }
 
   try {
@@ -195,4 +186,4 @@ PANELS 17-18 — CLIFFHANGER:
 
 Respond ONLY with the JSON. No preamble, no explanation.`;
 
-export default anthropic;
+export default gemini;
