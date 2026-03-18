@@ -172,7 +172,7 @@ async function generateWithGemini(
 // ---------------------------------------------------------------------------
 
 export async function generateCharacterSheet(prompt: string): Promise<Buffer> {
-  return generateWithGPT(prompt, undefined, 'low', '1024x1536');
+  return generateWithGemini(prompt, config.ai.modelQuality, undefined, '2:3');
 }
 
 export async function generatePanel(
