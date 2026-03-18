@@ -1,15 +1,8 @@
 import type { Metadata } from "next";
-import { Noto_Sans_KR } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import AuthProvider from "@/components/auth-provider";
 import Header from "@/components/header";
-
-const notoSansKR = Noto_Sans_KR({
-  variable: "--font-noto",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -43,7 +36,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body className={`${notoSansKR.variable} font-sans antialiased bg-white min-h-screen`}>
+      <head />
+      <body className="antialiased bg-white min-h-screen" style={{ fontFamily: '"NanumSquareRound", "Apple SD Gothic Neo", sans-serif' }}>
         <AuthProvider>
           <Header />
           <main className="min-h-[calc(100vh-65px)]">{children}</main>

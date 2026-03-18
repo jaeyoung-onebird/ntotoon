@@ -159,7 +159,7 @@ export async function runPipeline(
     const charsNeedingSheet: typeof allCharacters = allCharacters.filter(c => !c.referenceSheet);
     const charsWithSheet = allCharacters.filter(c => c.referenceSheet);
 
-    // 기존 시트 로드
+    // 기존 시트 로드 (S3 또는 로컬)
     for (const char of charsWithSheet) {
       onProgress({
         step: 'characters',
@@ -167,8 +167,22 @@ export async function runPipeline(
         message: `기존 캐릭터 로드: ${char.name}`,
       });
       try {
-        const sheetPath = path.join(process.cwd(), 'public', char.referenceSheet!);
-        const buffer = await fs.readFile(sheetPath);
+        let buffer: Buffer;
+        const ref = char.referenceSheet!;
+        if (ref.startsWith('http://') || ref.startsWith('https://')) {
+          // S3/CloudFront URL
+          const { downloadFromS3 } = await import('@/lib/s3');
+          const urlObj = new URL(ref);
+          const key = urlObj.pathname.slice(1);
+          buffer = await downloadFromS3(key);
+        } else if (ref.startsWith('/uploads/')) {
+          // 로컬 업로드 경로
+          const localPath = path.join(process.cwd(), 'public', ref);
+          buffer = await fs.readFile(localPath);
+        } else {
+          const localPath = path.join(process.cwd(), 'public', ref);
+          buffer = await fs.readFile(localPath);
+        }
         characterRefBuffers.set(char.name, buffer);
 
         const faceBuffer = await cropFaceFromSheet(buffer);
@@ -179,45 +193,68 @@ export async function runPipeline(
       }
     }
 
-    // 새 캐릭터 시트 생성
-    let charIndex = 0;
-    for (const char of charsNeedingSheet) {
-      charIndex++;
-      const charData = characterMap.get(char.name);
-      if (!charData) continue;
+    // 새 캐릭터 시트 생성 (2명씩 병렬 - rate limit 고려)
+    if (charsNeedingSheet.length > 0) {
+      onProgress({
+        step: 'characters',
+        progress: 16,
+        message: `캐릭터 시트 ${charsNeedingSheet.length}명 생성 중...`,
+      });
+
+      for (let ci = 0; ci < charsNeedingSheet.length; ci += 2) {
+      const charBatch = charsNeedingSheet.slice(ci, ci + 2);
+      const results = await Promise.allSettled(
+        charBatch.map(async (char) => {
+          const charData = characterMap.get(char.name);
+          if (!charData) return;
+
+          const prompt = buildCharacterSheetPrompt(charData, styleKey);
+          const imageBuffer = await generateCharacterSheet(prompt);
+
+          const s3Key = `projects/${projectId}/characters/${char.name}/sheet.png`;
+          const localUrl = await uploadToS3(imageBuffer, s3Key);
+
+          characterRefBuffers.set(char.name, imageBuffer);
+
+          const faceCropBuffer = await cropFaceFromSheet(imageBuffer);
+          characterFaceBuffers.set(char.name, faceCropBuffer);
+
+          await prisma.character.updateMany({
+            where: { projectId, name: char.name },
+            data: { referenceSheet: localUrl },
+          });
+
+          const updated = characterMap.get(char.name);
+          if (updated) {
+            updated.referenceSheet = localUrl;
+            characterMap.set(char.name, updated);
+          }
+
+          onProgress({
+            step: 'characters',
+            progress: 16 + Math.round(((ci + 1) / charsNeedingSheet.length) * 14),
+            message: `캐릭터 완성: ${char.name}`,
+            characterUrl: localUrl,
+          });
+        })
+      );
+      for (const r of results) {
+        if (r.status === 'rejected') {
+          console.error('[Pipeline] 캐릭터 시트 생성 실패 (건너뜀):', r.reason?.message || r.reason);
+        }
+      }
+      }
 
       onProgress({
         step: 'characters',
-        progress: 15 + Math.round((charIndex / Math.max(charsNeedingSheet.length, 1)) * 15),
-        message: `캐릭터 시트 생성 중: ${char.name} (${charIndex}/${charsNeedingSheet.length})`,
+        progress: 30,
+        message: `캐릭터 시트 ${charsNeedingSheet.length}명 완료`,
       });
-
-      const prompt = buildCharacterSheetPrompt(charData, styleKey);
-      const imageBuffer = await generateCharacterSheet(prompt);
-
-      const s3Key = `projects/${projectId}/characters/${char.name}/sheet.png`;
-      const localUrl = await uploadToS3(imageBuffer, s3Key);
-
-      characterRefBuffers.set(char.name, imageBuffer);
-
-      const faceCropBuffer = await cropFaceFromSheet(imageBuffer);
-      characterFaceBuffers.set(char.name, faceCropBuffer);
-
-      await prisma.character.updateMany({
-        where: { projectId, name: char.name },
-        data: { referenceSheet: localUrl },
-      });
-
-      const updated = characterMap.get(char.name);
-      if (updated) {
-        updated.referenceSheet = localUrl;
-        characterMap.set(char.name, updated);
-      }
     }
 
-    // Step 3: Generate panels (5개씩 병렬 생성)
+    // Step 3: Generate panels (3개씩 병렬 생성 - OpenAI rate limit 분당 5회)
     const panelRecords: Array<{ id: string; buffer: Buffer; dialogues: PanelData['dialogues'] }> = [];
-    const BATCH_SIZE = 5;
+    const BATCH_SIZE = 3;
 
     // 스타일 레퍼런스 로드
     // 1순위: 작가가 직접 업로드한 커스텀 레퍼런스
@@ -255,15 +292,12 @@ export async function runPipeline(
         message: `패널 생성 중: ${batchStart + 1}~${Math.min(batchStart + BATCH_SIZE, analysis.panels.length)}/${analysis.panels.length}`,
       });
 
-      // 배치 내 패널들을 동시에 생성
-      const batchResults = await Promise.all(
+      // 배치 내 패널들을 동시에 생성 (개별 실패 허용)
+      const batchResults = await Promise.allSettled(
         batch.map(async (panel, batchIdx) => {
           const i = batchStart + batchIdx;
           const prompt = await buildPanelPromptWithLearning(panel, characterMap, locationMap, styleKey);
           const hasCharacters = panel.characters_present.length > 0;
-          // Include both full character sheet and cropped face as references
-          // 레퍼런스 전략: 얼굴 크롭 우선 (얼굴이 더 명확), 없으면 시트 사용
-          // 패널당 최대 2캐릭터 레퍼런스 (초과 시 주연만)
           const MAX_REFS = 2;
           const refBuffers: Buffer[] = [];
           for (const name of panel.characters_present.slice(0, MAX_REFS)) {
@@ -279,7 +313,6 @@ export async function runPipeline(
           const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_raw.jpg`;
           const rawUrl = await uploadToS3(imageBuffer, s3Key);
 
-          // Save panel to DB
           const panelRecord = await prisma.panel.create({
             data: {
               episodeId: episode.id,
@@ -293,75 +326,115 @@ export async function runPipeline(
             },
           });
 
-          // Save dialogues
-          await Promise.all(
-            panel.dialogues.map((dialogue, d) =>
-              prisma.dialogue.create({
+          for (const [d, dialogue] of panel.dialogues.entries()) {
+            await prisma.dialogue.create({
+              data: {
+                panelId: panelRecord.id,
+                orderIndex: d,
+                speaker: dialogue.speaker,
+                text: dialogue.text,
+                type: dialogue.type.toUpperCase() as 'SPEECH' | 'THOUGHT' | 'NARRATION' | 'SFX',
+              },
+            });
+          }
+
+          for (const charName of panel.characters_present) {
+            const character = await prisma.character.findFirst({
+              where: { projectId, name: charName },
+            });
+            if (character) {
+              await prisma.panelCharacter.create({
                 data: {
                   panelId: panelRecord.id,
-                  orderIndex: d,
-                  speaker: dialogue.speaker,
-                  text: dialogue.text,
-                  type: dialogue.type.toUpperCase() as 'SPEECH' | 'THOUGHT' | 'NARRATION' | 'SFX',
+                  characterId: character.id,
+                  emotion: panel.character_emotions?.[charName],
+                  action: panel.character_actions?.[charName],
                 },
-              })
-            )
-          );
-
-          // Save panel characters
-          await Promise.all(
-            panel.characters_present.map(async (charName) => {
-              const character = await prisma.character.findFirst({
-                where: { projectId, name: charName },
               });
-              if (character) {
-                await prisma.panelCharacter.create({
-                  data: {
-                    panelId: panelRecord.id,
-                    characterId: character.id,
-                    emotion: panel.character_emotions?.[charName],
-                    action: panel.character_actions?.[charName],
-                  },
-                });
-              }
-            })
-          );
+            }
+          }
+
+          onProgress({
+            step: 'panels',
+            progress: 30 + Math.round(((batchStart + batchIdx + 1) / analysis.panels.length) * 35),
+            message: `패널 ${batchStart + batchIdx + 1}/${analysis.panels.length} 완성`,
+            panelUrl: rawUrl,
+          });
 
           return { id: panelRecord.id, buffer: imageBuffer, dialogues: panel.dialogues };
         })
       );
 
-      panelRecords.push(...batchResults);
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          panelRecords.push(result.value);
+        } else {
+          console.error('[Pipeline] 패널 생성 실패 (건너뜀):', result.reason?.message || result.reason);
+        }
+      }
     }
 
-    // Step 4: 말풍선 스마트 배치 + 렌더링 (병렬)
+    // Step 4: 말풍선 스마트 배치 + 렌더링 (3개씩 배치 — rate limit 방지)
     onProgress({ step: 'bubbles', progress: 65, message: `말풍선 배치 분석 중... (${panelRecords.length}개)` });
 
-    const panelsWithBubbles = await Promise.all(
-      panelRecords.map(async (panel, i) => {
-        // Claude Vision으로 이미지 분석 → 최적 위치 계산
-        const placements = await calculateBubblePlacements(panel.buffer, panel.dialogues);
-        // 계산된 위치로 말풍선 렌더링
-        const dialoguesWithPositions = panel.dialogues.map((d, di) => ({
-          ...d,
-          positionX: placements[di]?.x,
-          positionY: placements[di]?.y,
-        }));
-        const finalBuffer = await addSpeechBubbles(panel.buffer, dialoguesWithPositions);
-        const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_final.jpg`;
-        const finalUrl = await uploadToS3(finalBuffer, s3Key);
+    const panelsWithBubbles: Array<{ id: string; buffer: Buffer }> = [];
+    const BUBBLE_BATCH = 3;
 
-        await prisma.panel.update({
-          where: { id: panel.id },
-          data: { finalImageUrl: finalUrl },
-        });
+    for (let bi = 0; bi < panelRecords.length; bi += BUBBLE_BATCH) {
+      const bubbleBatch = panelRecords.slice(bi, bi + BUBBLE_BATCH);
 
-        return { id: panel.id, buffer: finalBuffer };
-      })
-    );
+      const batchResults = await Promise.allSettled(
+        bubbleBatch.map(async (panel, batchIdx) => {
+          const i = bi + batchIdx;
+          try {
+            const placements = await calculateBubblePlacements(panel.buffer, panel.dialogues);
+            const dialoguesWithPositions = panel.dialogues.map((d, di) => ({
+              ...d,
+              positionX: placements[di]?.x,
+              positionY: placements[di]?.y,
+            }));
+            const finalBuffer = await addSpeechBubbles(panel.buffer, dialoguesWithPositions);
+            const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_final.jpg`;
+            const finalUrl = await uploadToS3(finalBuffer, s3Key);
+
+            await prisma.panel.update({
+              where: { id: panel.id },
+              data: { finalImageUrl: finalUrl },
+            });
+
+            return { id: panel.id, buffer: finalBuffer };
+          } catch (err) {
+            // 말풍선 실패 시 원본 이미지로 대체
+            console.warn(`[Pipeline] 말풍선 실패 (패널 ${i}, 원본 사용):`, (err as Error).message);
+            const s3Key = `projects/${projectId}/episodes/${episode.id}/panels/${i}_final.jpg`;
+            const finalUrl = await uploadToS3(panel.buffer, s3Key);
+            await prisma.panel.update({
+              where: { id: panel.id },
+              data: { finalImageUrl: finalUrl },
+            });
+            return { id: panel.id, buffer: panel.buffer };
+          }
+        })
+      );
+
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled') {
+          panelsWithBubbles.push(result.value);
+        }
+      }
+
+      onProgress({
+        step: 'bubbles',
+        progress: 65 + Math.round(((bi + bubbleBatch.length) / panelRecords.length) * 20),
+        message: `말풍선 완료: ${Math.min(bi + BUBBLE_BATCH, panelRecords.length)}/${panelRecords.length}`,
+      });
+    }
 
     // Step 5: Assemble webtoon
-    onProgress({ step: 'assembly', progress: 90, message: '웹툰 이미지 조립 중...' });
+    if (panelsWithBubbles.length === 0) {
+      throw new Error('모든 패널 생성에 실패했습니다. 다시 시도해주세요.');
+    }
+    onProgress({ step: 'assembly', progress: 90, message: `웹툰 이미지 조립 중... (${panelsWithBubbles.length}컷)` });
     const webtoonBuffer = await assembleWebtoon(
       panelsWithBubbles.map((p) => ({ buffer: p.buffer, id: p.id }))
     );

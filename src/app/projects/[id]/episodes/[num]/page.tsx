@@ -2,13 +2,15 @@
 
 import { useEffect, useState, useCallback, use } from 'react';
 import { useSession } from 'next-auth/react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface PipelineProgress {
   step: string;
   progress: number;
   message: string;
+  panelUrl?: string;
+  characterUrl?: string;
 }
 
 interface Panel {
@@ -60,6 +62,9 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
   const episodeNum = parseInt(num);
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const router = useRouter();
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleInput, setTitleInput] = useState('');
   const jobId = searchParams.get('jobId');
 
   const [project, setProject] = useState<Project | null>(null);
@@ -81,6 +86,8 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
   const [commentText, setCommentText] = useState('');
   const [eta, setEta] = useState<string>('');
   const [commentLoading, setCommentLoading] = useState(false);
+  const [livePanels, setLivePanels] = useState<string[]>([]);
+  const [liveChars, setLiveChars] = useState<string[]>([]);
 
   useEffect(() => {
     if (!expanding) { setExpandElapsed(0); return; }
@@ -164,65 +171,121 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
     finally { setCommentLoading(false); }
   };
 
-  // SSE
+  // SSE with auto-reconnect
   useEffect(() => {
     const activeJobId = jobId || project?.jobs?.[0]?.id;
     if (!activeJobId) return;
     const job = project?.jobs?.find((j) => j.id === activeJobId);
     if (job?.status === 'COMPLETED' || job?.status === 'FAILED') return;
 
-    const es = new EventSource(`/api/stream/${activeJobId}`);
+    let es: EventSource | null = null;
+    let ticker: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
+    let retryCount = 0;
+    const MAX_RETRIES = 10;
     const realProgressRef = { current: 0 };
     const sseStartTime = Date.now();
 
-    // 미세 진행: 서버 업데이트 사이에 부드럽게 올라감
-    const ticker = setInterval(() => {
-      setProgress(prev => {
-        if (!prev || prev.step === 'complete' || prev.step === 'failed') return prev;
-        const ceiling = Math.min(realProgressRef.current + 8, 99);
-        if (prev.progress >= ceiling) return prev;
-        const newProgress = Math.round((prev.progress + 0.2) * 10) / 10;
+    function connect() {
+      if (cancelled) return;
+      es = new EventSource(`/api/stream/${activeJobId}`);
 
-        // ETA 계산
-        const elapsed = (Date.now() - sseStartTime) / 1000;
-        if (newProgress > 5) {
-          const totalEstimate = elapsed / (newProgress / 100);
-          const remaining = Math.max(0, totalEstimate - elapsed);
-          if (remaining < 60) {
-            setEta(`약 ${Math.ceil(remaining)}초 남음`);
-          } else {
-            setEta(`약 ${Math.ceil(remaining / 60)}분 남음`);
+      ticker = setInterval(() => {
+        setProgress(prev => {
+          if (!prev || prev.step === 'complete' || prev.step === 'failed') return prev;
+          const ceiling = Math.min(realProgressRef.current + 8, 99);
+          if (prev.progress >= ceiling) return prev;
+          const newProgress = Math.round((prev.progress + 0.2) * 10) / 10;
+
+          const elapsed = (Date.now() - sseStartTime) / 1000;
+          if (newProgress > 5) {
+            const totalEstimate = elapsed / (newProgress / 100);
+            const remaining = Math.max(0, totalEstimate - elapsed);
+            if (remaining < 60) {
+              setEta(`약 ${Math.ceil(remaining)}초 남음`);
+            } else {
+              setEta(`약 ${Math.ceil(remaining / 60)}분 남음`);
+            }
           }
-        }
 
-        return { ...prev, progress: newProgress };
-      });
-    }, 400);
-
-    es.onmessage = (event) => {
-      try {
-        const data: PipelineProgress = JSON.parse(event.data);
-        realProgressRef.current = data.progress;
-        setProgress(data);
-        setLogs(prev => {
-          const msg = `[${new Date().toLocaleTimeString('ko-KR')}] ${data.message}`;
-          if (prev[prev.length - 1] === msg) return prev;
-          return [...prev.slice(-20), msg]; // 최근 20개만 유지
+          return { ...prev, progress: newProgress };
         });
-        if (data.step === 'complete' || data.step === 'failed') {
-          clearInterval(ticker);
-          es.close();
-          fetchProject();
+      }, 400);
+
+      es.onmessage = (event) => {
+        try {
+          const data: PipelineProgress = JSON.parse(event.data);
+          retryCount = 0; // 메시지 수신 성공 → 재시도 카운트 리셋
+          realProgressRef.current = data.progress;
+          setProgress(data);
+          setLogs(prev => {
+            const msg = `[${new Date().toLocaleTimeString('ko-KR')}] ${data.message}`;
+            if (prev[prev.length - 1] === msg) return prev;
+            return [...prev.slice(-20), msg];
+          });
+          if (data.panelUrl) {
+            setLivePanels(prev => prev.includes(data.panelUrl!) ? prev : [...prev, data.panelUrl!]);
+          }
+          if (data.characterUrl) {
+            setLiveChars(prev => prev.includes(data.characterUrl!) ? prev : [...prev, data.characterUrl!]);
+          }
+          if (data.step === 'complete' || data.step === 'failed') {
+            cleanup();
+            setLivePanels([]);
+            setLiveChars([]);
+            fetchProject();
+          }
+        } catch {}
+      };
+
+      es.onerror = () => {
+        // 연결 끊김 → 정리 후 재연결 시도
+        if (es) es.close();
+        if (ticker) clearInterval(ticker);
+        es = null;
+        ticker = null;
+
+        if (cancelled) return;
+
+        retryCount++;
+        if (retryCount > MAX_RETRIES) {
+          // 최대 재시도 초과 → DB에서 최종 상태 확인
+          fetch(`/api/projects/${id}`)
+            .then(r => r.json())
+            .then(p => {
+              if (p.status === 'COMPLETED') {
+                setProgress({ step: 'complete', progress: 100, message: '완료!' });
+                fetchProject();
+              } else if (p.status === 'FAILED') {
+                setProgress(prev => prev ? { ...prev, step: 'failed', message: '생성 실패' } : null);
+              } else {
+                // 아직 진행 중이면 한번 더 시도
+                retryCount = 0;
+                setTimeout(connect, 3000);
+              }
+            })
+            .catch(() => {
+              setProgress(prev => prev ? { ...prev, step: 'failed', message: '연결이 끊어졌습니다' } : null);
+            });
+          return;
         }
-      } catch {}
-    };
-    es.onerror = () => {
-      clearInterval(ticker);
-      es.close();
-      setProgress(prev => prev ? { ...prev, step: 'failed' } : null);
-    };
-    return () => { clearInterval(ticker); es.close(); };
-  }, [jobId, project?.jobs, fetchProject]);
+
+        // 재연결 (점진적 대기: 1초, 2초, 3초...)
+        const delay = Math.min(retryCount * 1000, 5000);
+        setLogs(prev => [...prev.slice(-20), `[${new Date().toLocaleTimeString('ko-KR')}] 연결 재시도 중... (${retryCount}/${MAX_RETRIES})`]);
+        setTimeout(connect, delay);
+      };
+    }
+
+    function cleanup() {
+      cancelled = true;
+      if (es) es.close();
+      if (ticker) clearInterval(ticker);
+    }
+
+    connect();
+    return cleanup;
+  }, [jobId, project?.jobs, fetchProject, id]);
 
   const handleRewrite = async () => {
     if (!rewriteText.trim()) return;
@@ -296,8 +359,63 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           <Link href={`/projects/${id}`} className="text-sm text-gray-500 hover:text-gray-700 mb-1 block">
             ← {project.title}
           </Link>
-          <h1 className="text-2xl font-bold text-gray-900">{episodeNum}화{episode?.title ? ` - ${episode.title}` : ''}</h1>
+          {editingTitle && isOwner ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                className="text-2xl font-bold text-gray-900 border-b-2 border-blue-500 outline-none bg-transparent"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    fetch(`/api/projects/${id}/episodes/${episode?.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ title: titleInput }),
+                    }).then(() => { fetchProject(); setEditingTitle(false); });
+                  } else if (e.key === 'Escape') setEditingTitle(false);
+                }}
+              />
+              <button
+                onClick={() => {
+                  fetch(`/api/projects/${id}/episodes/${episode?.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: titleInput }),
+                  }).then(() => { fetchProject(); setEditingTitle(false); });
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >저장</button>
+              <button onClick={() => setEditingTitle(false)} className="text-sm text-gray-400 hover:text-gray-600">취소</button>
+            </div>
+          ) : (
+            <h1 className="text-2xl font-bold text-gray-900">{episodeNum}화{episode?.title ? ` - ${episode.title}` : ''}</h1>
+          )}
         </div>
+        {isOwner && !isGenerating && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setTitleInput(episode?.title || ''); setEditingTitle(true); }}
+              className="px-3 py-1.5 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-gray-700 transition-all"
+            >
+              수정
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm(`${episodeNum}화를 삭제하시겠습니까?`)) return;
+                const res = await fetch(`/api/projects/${id}/episodes/${episode?.id}`, { method: 'DELETE' });
+                if (res.ok) {
+                  if (episodeNum > 1) router.push(`/projects/${id}/episodes/${episodeNum - 1}`);
+                  else router.push(`/projects/${id}`);
+                } else alert('삭제 실패');
+              }}
+              className="px-3 py-1.5 text-sm text-red-400 border border-red-200 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all"
+            >
+              삭제
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 에피소드 네비게이션 */}
@@ -349,6 +467,46 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 생성 중 실시간 미리보기 */}
+      {isGenerating && (liveChars.length > 0 || livePanels.length > 0) && (
+        <div className="mb-8">
+          {/* 캐릭터 미리보기 */}
+          {liveChars.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">캐릭터 생성 완료</h3>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {liveChars.map((url, i) => (
+                  <img key={i} src={url} alt={`캐릭터 ${i + 1}`} className="w-28 h-40 object-cover rounded-lg shadow-md flex-shrink-0 animate-fade-in" />
+                ))}
+              </div>
+            </div>
+          )}
+          {/* 패널 미리보기 */}
+          {livePanels.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">패널 생성 중 ({livePanels.length}장 완성)</h3>
+              <div className="max-w-[600px] mx-auto space-y-3">
+                {livePanels.map((url, i) => (
+                  <div key={i} className="rounded-xl overflow-hidden shadow-md bg-white animate-fade-in">
+                    <img src={url} alt={`패널 ${i + 1}`} className="w-full" loading="lazy" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 생성 중 소설 텍스트 읽기 */}
+      {isGenerating && project.novelText && (
+        <div className="max-w-5xl mx-auto mb-8 bg-white border-2 border-gray-200 p-8">
+          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">이야기 원작</h3>
+          <div className="text-[15px] text-gray-900 whitespace-pre-wrap leading-[1.9] max-h-[480px] overflow-y-auto" style={{ fontFamily: '"NanumSquareRound", "Apple SD Gothic Neo", sans-serif' }}>
+            {project.novelText}
+          </div>
         </div>
       )}
 
@@ -502,7 +660,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
                   disabled={expanding || nextEpLoading || rewriteText.trim().length < 10}
                   className="px-5 py-2.5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
-                  {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / 15) * 100))}% (${Math.max(0, 15 - expandElapsed)}초)` : 'AI로 내용 추가'}
+                  {expanding ? `AI 작성 중... (${expandElapsed}초) · 약 1분 소요` : 'AI로 내용 추가'}
                 </button>
                 <button
                   onClick={() => { setRewriting(false); setRewriteText(''); }}
@@ -682,7 +840,7 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
                   disabled={expanding || nextEpLoading || nextEpText.trim().length < 10}
                   className="px-5 py-2.5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
-                  {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / 15) * 100))}% (${Math.max(0, 15 - expandElapsed)}초)` : 'AI로 살 붙이기'}
+                  {expanding ? `AI 작성 중... (${expandElapsed}초) · 약 1분 소요` : 'AI로 살 붙이기'}
                 </button>
                 <button
                   onClick={() => { setShowNextEpForm(false); setNextEpText(''); }}

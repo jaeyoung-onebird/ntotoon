@@ -8,13 +8,35 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "NanumSquareRound", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: monospace;
+}
+
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('/fonts/NanumSquareRoundB.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'NanumSquareRound';
+  src: url('/fonts/NanumSquareRoundEB.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* 실시간 미리보기 애니메이션 */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
 }
 
 /* 웹툰 이미지 불펌 방지 */

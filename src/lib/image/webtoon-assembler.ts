@@ -13,10 +13,14 @@ export async function assembleWebtoon(panels: PanelImage[]): Promise<Buffer> {
   if (panels.length === 0) throw new Error('No panels to assemble');
 
   // Resize all panels to consistent width and get their heights
-  const resizedPanels = await Promise.all(
-    panels.map(async (panel) => {
+  const resizedPanels: Array<{ buffer: Buffer; height: number; id: string }> = [];
+  for (const panel of panels) {
+    try {
       const metadata = await sharp(panel.buffer).metadata();
-      const aspectRatio = metadata.height! / metadata.width!;
+      const w = metadata.width || 1;
+      const h = metadata.height || 1;
+      if (w < 10 || h < 10) continue; // 손상된 이미지 건너뛰기
+      const aspectRatio = h / w;
       const newHeight = Math.round(WEBTOON_WIDTH * aspectRatio);
 
       const buffer = await sharp(panel.buffer)
@@ -24,9 +28,13 @@ export async function assembleWebtoon(panels: PanelImage[]): Promise<Buffer> {
         .png({ compressionLevel: 1 })
         .toBuffer();
 
-      return { buffer, height: newHeight, id: panel.id };
-    })
-  );
+      resizedPanels.push({ buffer, height: newHeight, id: panel.id });
+    } catch (err) {
+      console.warn(`[Assembler] 패널 ${panel.id} 리사이즈 실패, 건너뛰기:`, (err as Error).message);
+    }
+  }
+
+  if (resizedPanels.length === 0) throw new Error('No valid panels to assemble');
 
   // Calculate total height
   const totalHeight =

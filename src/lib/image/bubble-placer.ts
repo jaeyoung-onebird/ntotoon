@@ -82,14 +82,30 @@ Respond ONLY in JSON array:
     const jsonStr = jsonMatch ? jsonMatch[1] : content.text;
     const placements = JSON.parse(jsonStr) as Array<{ index: number; x: number; y: number; tailDirection: string }>;
 
-    return placements.map((p) => {
-      const d = dialogues[p.index] || dialogues[0];
+    // 인덱스 범위 검증 + 대사 수와 배치 수 맞추기
+    const validPlacements = placements.filter(
+      (p) => typeof p.index === 'number' && p.index >= 0 && p.index < dialogues.length
+    );
+
+    // Claude가 반환한 배치가 부족하면 fallback으로 보충
+    if (validPlacements.length < dialogues.length) {
+      const covered = new Set(validPlacements.map(p => p.index));
+      const fb = fallbackPlacements(dialogues);
+      for (let i = 0; i < dialogues.length; i++) {
+        if (!covered.has(i)) {
+          validPlacements.push({ index: i, x: fb[i].x, y: fb[i].y, tailDirection: fb[i].tailDirection });
+        }
+      }
+    }
+
+    return validPlacements.map((p) => {
+      const d = dialogues[p.index];
       return {
         speaker: d.speaker,
         text: d.text,
         type: d.type,
-        x: Math.max(0.05, Math.min(0.95, p.x)),
-        y: Math.max(0.05, Math.min(0.95, p.y)),
+        x: Math.max(0.05, Math.min(0.95, p.x || 0.5)),
+        y: Math.max(0.05, Math.min(0.95, p.y || 0.1)),
         tailDirection: (p.tailDirection || 'down') as BubblePlacement['tailDirection'],
       };
     });

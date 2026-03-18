@@ -2,21 +2,29 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Header() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [credits, setCredits] = useState<number | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
 
+  // 페이지 이동마다 크레딧 + 닉네임 갱신
   useEffect(() => {
     if (status === 'authenticated') {
       fetch('/api/credits')
         .then((res) => res.ok ? res.json() : null)
         .then((data) => { if (data) setCredits(data.credits); })
         .catch(() => {});
+      fetch('/api/settings')
+        .then((res) => res.ok ? res.json() : null)
+        .then((data) => { if (data?.name) setUserName(data.name); })
+        .catch(() => {});
     }
-  }, [status]);
+  }, [status, pathname]);
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
@@ -159,7 +167,7 @@ export default function Header() {
                 내 작품
               </Link>
               <Link href="/settings" className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all">
-                {session.user.name || session.user.email}
+                {userName || session.user.name || session.user.email}
               </Link>
               <Link href="/credits" className="px-3 py-1.5 bg-yellow-50 text-yellow-700 text-sm font-semibold rounded-lg hover:bg-yellow-100 transition-all border border-yellow-200">
                 {credits !== null ? `${credits}C` : '...'}
@@ -206,7 +214,7 @@ export default function Header() {
           {session?.user ? (
             <>
               <Link href="/projects" className="block px-4 py-2.5 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100">내 작품</Link>
-              <Link href="/settings" className="block px-4 py-2.5 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100">{session.user.name || '내 정보'}</Link>
+              <Link href="/settings" className="block px-4 py-2.5 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100">{userName || session.user.name || '내 정보'}</Link>
               <Link href="/credits" className="block px-4 py-2.5 text-yellow-700 text-sm font-semibold rounded-lg hover:bg-yellow-50">크레딧 {credits !== null ? `${credits}C` : ''}</Link>
               <Link href="/create" className="block px-4 py-2.5 text-blue-600 text-sm font-semibold rounded-lg hover:bg-blue-50">+ 웹툰 만들기</Link>
               <button

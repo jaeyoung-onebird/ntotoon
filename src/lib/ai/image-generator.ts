@@ -98,7 +98,7 @@ async function generateWithGPT(
     } catch (error) {
       if (attempt === maxRetries) throw error;
       const isRateLimit = error instanceof Error && error.message.includes('429');
-      const waitMs = isRateLimit ? 10000 * (attempt + 1) : 2000 * (attempt + 1);
+      const waitMs = isRateLimit ? 15000 * (attempt + 1) : 2000 * (attempt + 1);
       console.warn(`[GPT-Image] Retry ${attempt + 1}/${maxRetries} in ${waitMs}ms:`, (error as Error).message);
       await sleep(waitMs);
     }
@@ -159,7 +159,7 @@ async function generateWithGemini(
     } catch (error) {
       if (attempt === maxRetries) throw error;
       const isRateLimit = error instanceof Error && error.message.includes('429');
-      const waitMs = isRateLimit ? 10000 * (attempt + 1) : 2000 * (attempt + 1);
+      const waitMs = isRateLimit ? 15000 * (attempt + 1) : 2000 * (attempt + 1);
       console.warn(`[Gemini] Retry ${attempt + 1}/${maxRetries} in ${waitMs}ms:`, (error as Error).message);
       await sleep(waitMs);
     }

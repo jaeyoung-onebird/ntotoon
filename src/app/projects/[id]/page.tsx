@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback, use, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+
 
 interface PipelineProgress {
   step: string;
@@ -40,6 +42,7 @@ interface Project {
   title: string;
   status: string;
   novelText: string;
+  userId: string;
   characters: Character[];
   episodes: Episode[];
   jobs: Array<{ id: string; status: string; progress: number; message: string | null }>;
@@ -48,6 +51,8 @@ interface Project {
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const router = useRouter();
   const jobId = searchParams.get('jobId');
 
   const [project, setProject] = useState<Project | null>(null);
@@ -168,8 +173,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const isGenerating = progress && progress.step !== 'complete' && progress.step !== 'failed';
+  // 프로젝트가 이미 완료/실패면 진행바 숨기기
+  const isGenerating = progress
+    && progress.step !== 'complete'
+    && progress.step !== 'failed'
+    && project.status !== 'COMPLETED'
+    && project.status !== 'FAILED';
   const latestEpisode = project.episodes[project.episodes.length - 1];
+  const isOwner = session?.user && (session.user as { id?: string }).id === project.userId;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -180,6 +191,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">{project.title}</h1>
         </div>
+        {isOwner && !isGenerating && (
+          <button
+            onClick={async () => {
+              if (!confirm('이 프로젝트를 삭제하시겠습니까? 모든 에피소드와 이미지가 삭제됩니다.')) return;
+              const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' });
+              if (res.ok) router.push('/projects');
+              else alert('삭제 실패');
+            }}
+            className="px-4 py-2 text-sm text-red-400 border border-red-200 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all"
+          >
+            프로젝트 삭제
+          </button>
+        )}
       </div>
 
       {/* Progress indicator */}
@@ -386,7 +410,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                   disabled={expanding || nextEpLoading || nextEpText.trim().length < 10}
                   className="px-5 py-2.5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
                 >
-                  {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / 15) * 100))}% (${Math.max(0, 15 - expandElapsed)}초)` : 'AI로 살 붙이기'}
+                  {expanding ? `AI 작성 중... (${expandElapsed}초)` : 'AI로 살 붙이기'}
                 </button>
                 <button
                   onClick={() => { setShowNextEpForm(false); setNextEpText(''); }}

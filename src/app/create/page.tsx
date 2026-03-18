@@ -15,8 +15,6 @@ export default function CreatePage() {
   const [expandElapsed, setExpandElapsed] = useState(0);
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const EXPAND_ESTIMATE = 15; // 예상 소요 시간 (초)
-
   useEffect(() => {
     if (!expanding) { setExpandElapsed(0); return; }
     setExpandElapsed(0);
@@ -252,7 +250,7 @@ export default function CreatePage() {
             disabled={expanding || loading || novelText.trim().length < 10}
             className="py-3.5 px-5 bg-white border-2 border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-300 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all"
           >
-            {expanding ? `AI 작성 중... ${Math.min(99, Math.round((expandElapsed / EXPAND_ESTIMATE) * 100))}% (${Math.max(0, EXPAND_ESTIMATE - expandElapsed)}초)` : 'AI로 살 붙이기'}
+            {expanding ? `AI 작성 중... (${expandElapsed}초) · 약 1분 소요` : 'AI로 살 붙이기'}
           </button>
         </div>
       </form>

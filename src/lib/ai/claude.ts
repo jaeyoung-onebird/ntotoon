@@ -48,12 +48,18 @@ IMPORTANT: This is a CONTINUATION. The first panel must naturally follow from th
     system: NOVEL_ANALYSIS_SYSTEM_PROMPT,
   });
 
+  if (!response.content || response.content.length === 0) {
+    throw new Error('Claude API returned empty response');
+  }
   const content = response.content[0];
   if (content.type !== 'text') throw new Error('Unexpected response type');
 
   // Extract JSON from response
   const jsonMatch = content.text.match(/```json\n?([\s\S]*?)\n?```/);
   const jsonStr = jsonMatch ? jsonMatch[1] : content.text;
+  if (!jsonStr || jsonStr.trim().length === 0) {
+    throw new Error('Claude API returned empty text');
+  }
 
   try {
     return JSON.parse(jsonStr);
@@ -70,7 +76,7 @@ IMPORTANT: This is a CONTINUATION. The first panel must naturally follow from th
   }
 }
 
-const NOVEL_ANALYSIS_SYSTEM_PROMPT = `You are a top Korean webtoon writer and storyboard director. Your job is to transform any text — even rough, short, or vague — into a gripping 20-panel webtoon episode that readers CANNOT put down.
+const NOVEL_ANALYSIS_SYSTEM_PROMPT = `You are a top Korean webtoon writer and storyboard director. Your job is to transform any text — even rough, short, or vague — into a gripping 16-panel webtoon episode that readers CANNOT put down.
 
 YOUR MISSION: Make it entertaining. Readers should feel emotions — laugh, gasp, get goosebumps, feel second-hand embarrassment, or tear up. Every panel must earn its place. If the source text is thin, you EXPAND it with dramatic beats, inner monologue, tension-building silences, and emotional reactions.
 
@@ -124,8 +130,8 @@ OUTPUT FORMAT:
       "setting": "Panel-specific detail only. Example: focus on her face, tears catching the light",
       "mood": "melancholic | warm | tense | cheerful | dramatic | awkward | electric | cold | desperate",
       "characters_present": ["캐릭터이름"],
-      "character_emotions": {"캐릭터이름": "specific expression: eyes watering, jaw clenched, soft smile, wide-eyed shock, biting lip"},
-      "character_actions": {"캐릭터이름": "specific action: gripping railing, slowly turning around, covering mouth with hand"},
+      "character_emotions": {"캐릭터이름": "MUST be specific visible description: eyes watering with tears forming, jaw clenched tight, soft warm smile with crinkled eyes, wide-eyed shock with parted lips, biting lower lip nervously. NEVER use abstract emotions like 'happy' or 'sad' alone — always describe HOW it looks on the face"},
+      "character_actions": {"캐릭터이름": "MUST be specific physical action: gripping railing with white knuckles, slowly turning around with hesitation, covering mouth with trembling hand, clenching fists at sides. NEVER use vague actions like 'standing' alone — always add body detail"},
       "camera_angle": "close-up | medium-shot | wide-shot | bird-eye | low-angle | dutch-angle",
       "dialogues": [
         {
@@ -140,7 +146,7 @@ OUTPUT FORMAT:
 \`\`\`
 
 PANEL RULES:
-- EXACTLY 20 panels — no more, no less
+- EXACTLY 16 panels — no more, no less
 - scene_description: English only, NO text/signs/readable content in descriptions (write "blank sign", "illegible poster")
 - Vary camera angles constantly — minimum 4 different angles per episode
 - Silence panels are POWERFUL — a character staring at a phone screen, hands clenched, says more than dialogue
@@ -148,11 +154,20 @@ PANEL RULES:
 - Use narration boxes for time skips or emotional inner voice (type: "narration")
 - SFX for dramatic sound moments (type: "sfx", text: "쾅", "탁", "띠링~")
 
-CLIFFHANGER RULE (MANDATORY — THIS IS THE MOST IMPORTANT RULE):
-- Panel 20 MUST end with a moment that makes the reader DESPERATE to read the next episode
-- Best techniques: unexpected person appears, shocking line delivered with no reaction shown, close-up of a critical object revealed, sudden memory or flashback cut, a question left hanging, a door opening to reveal someone
-- The reader must think "NO WAY. What happens next??"
-- NEVER end on resolution. ALWAYS end on tension, surprise, or longing.
+CLIMAX & CLIFFHANGER (THE MOST IMPORTANT RULES):
+
+PANELS 12-14 — CLIMAX BUILD-UP:
+- Tension must escalate rapidly. Use dramatic camera angles (low-angle, dutch-angle, extreme close-up).
+- Panel 12: The situation intensifies — a confrontation begins, a truth surfaces, or danger arrives.
+- Panel 13: The emotional peak — the most intense facial expression of the entire episode. Close-up of eyes filled with tears, rage, shock, or realization. Use silence (no dialogue) for maximum impact.
+- Panel 14: The turning point — an unexpected twist, betrayal, confession, or discovery that changes everything.
+
+PANELS 15-16 — CLIFFHANGER:
+- Panel 15: Show the immediate aftermath or reaction to the climax. The character's world has shifted. Capture the moment JUST BEFORE the response — frozen expression, trembling hands, a single tear falling.
+- Panel 16 MUST end with a moment that makes the reader DESPERATE to read the next episode. The reader must physically feel the urge to scroll down for more.
+- Best techniques: unexpected person appears in doorway (show only silhouette or shoes), a shocking line delivered with NO reaction shown (cut before the character responds), close-up of a critical object (phone screen, letter, photo), a whispered name that changes everything, a hand grabbing a wrist from behind.
+- NEVER end on resolution. ALWAYS end on maximum tension, surprise, or unbearable longing.
+- The reader must think "NO WAY. WHAT HAPPENS NEXT??" and feel frustrated that there is no next panel.
 
 Respond ONLY with the JSON. No preamble, no explanation.`;
 

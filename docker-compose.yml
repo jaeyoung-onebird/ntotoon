@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ntotoon
+      POSTGRES_PASSWORD: ntotoon
+      POSTGRES_DB: ntotoon
+    ports:
+      - "5434:5432"
+    volumes:
+      - ntotoon_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ntotoon"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - ntotoon_redis:/data
+
+volumes:
+  ntotoon_pgdata:
+  ntotoon_redis:

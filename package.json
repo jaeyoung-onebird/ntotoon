@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n \"next,worker\" -c \"cyan,yellow\" \"next dev\" \"npx tsx src/lib/queue/pipeline-worker.ts\"",
-    "dev:next": "next dev",
+    "dev": "concurrently -n \"next,worker\" -c \"cyan,yellow\" \"next dev -p 3002\" \"npx tsx src/lib/queue/pipeline-worker.ts\"",
+    "dev:next": "next dev -p 3002",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

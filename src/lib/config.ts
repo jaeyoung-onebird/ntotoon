@@ -1,6 +1,6 @@
 export const config = {
   panels: {
-    maxCount: parseInt(process.env.MAX_PANELS || '20'),
+    maxCount: parseInt(process.env.MAX_PANELS || '16'), // 기본 16패널
     batchSize: parseInt(process.env.PANEL_BATCH_SIZE || '5'),
   },
   webtoon: {

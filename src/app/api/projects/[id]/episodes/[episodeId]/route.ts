@@ -3,6 +3,36 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; episodeId: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = (session.user as { id: string }).id;
+    const { id, episodeId } = await params;
+
+    const project = await prisma.project.findUnique({ where: { id }, select: { userId: true } });
+    if (!project || project.userId !== userId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { title } = await request.json();
+    const episode = await prisma.episode.update({
+      where: { id: episodeId },
+      data: { title },
+    });
+
+    return NextResponse.json(episode);
+  } catch (error) {
+    console.error('Failed to update episode:', error);
+    return NextResponse.json({ error: 'Failed to update episode' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; episodeId: string }> }

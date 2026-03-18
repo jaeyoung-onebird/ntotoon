@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { toPublicUrl } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
@@ -44,7 +45,22 @@ export async function GET(
       });
     }
 
-    return NextResponse.json(project);
+    // 이미지 URL을 /cdn/ 프록시 경로로 변환
+    const sanitized = {
+      ...project,
+      characters: project.characters.map(c => ({ ...c, referenceSheet: toPublicUrl(c.referenceSheet) })),
+      episodes: project.episodes.map(ep => ({
+        ...ep,
+        outputUrl: toPublicUrl(ep.outputUrl),
+        panels: ep.panels.map(p => ({
+          ...p,
+          rawImageUrl: toPublicUrl(p.rawImageUrl),
+          finalImageUrl: toPublicUrl(p.finalImageUrl),
+        })),
+      })),
+    };
+
+    return NextResponse.json(sanitized);
   } catch (error) {
     console.error('Failed to get project:', error);
     return NextResponse.json({ error: 'Failed to get project' }, { status: 500 });
@@ -71,6 +87,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // cascade가 없는 테이블 먼저 정리
+    await prisma.qaResult.deleteMany({ where: { projectId: id } });
+    await prisma.goldenImage.deleteMany({ where: { projectId: id } });
     await prisma.project.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -28,9 +28,12 @@ interface Project {
   style: string;
   createdAt: string;
   userId: string;
+  user: { name: string | null };
   characters: Character[];
   episodes: Episode[];
   _count: { episodes: number };
+  ratingAvg: number;
+  ratingCount: number;
 }
 
 export default function FeedPage() {
@@ -126,57 +129,48 @@ export default function FeedPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
             {projects.map((project) => {
-              // 첫 에피소드의 첫 패널 이미지를 썸네일로
               const firstPanel = project.episodes?.[0]?.panels?.[0];
               const thumbnail = firstPanel?.finalImageUrl || firstPanel?.rawImageUrl;
-              const charNames = project.characters?.map(c => c.name).join(', ');
 
               return (
                 <Link
                   key={project.id}
                   href={`/projects/${project.id}/episodes/1`}
-                  className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
+                  className="group aspect-square bg-white overflow-hidden shadow-sm hover:shadow-lg border border-gray-100 transition-all duration-300 flex flex-col"
                 >
-                  {/* 썸네일 */}
-                  <div className="aspect-[3/4] overflow-hidden bg-gray-100 relative">
+                  <div className="flex-1 overflow-hidden bg-gray-50">
                     {thumbnail ? (
                       <img
                         src={thumbnail}
                         alt={project.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-300">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                           <rect x="3" y="3" width="18" height="18" rx="2" />
                           <circle cx="8.5" cy="8.5" r="1.5" />
                           <path d="M21 15l-5-5L5 21" />
                         </svg>
                       </div>
                     )}
-                    {/* 에피소드 수 뱃지 */}
-                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                      {project._count.episodes}화
-                    </div>
                   </div>
-
-                  {/* 정보 */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1 group-hover:text-blue-600 transition-colors">
-                      {project.title}
-                    </h3>
-                    {charNames && (
-                      <p className="text-xs text-gray-400 mb-2">등장인물: {charNames}</p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">
-                        {new Date(project.createdAt).toLocaleDateString('ko-KR')}
-                      </span>
-                      <span className="text-xs text-blue-500 font-medium group-hover:underline">
-                        읽기 →
-                      </span>
+                  <div className="px-3 py-2.5 bg-white flex-shrink-0">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-gray-900 text-sm leading-tight truncate group-hover:text-blue-600 transition-colors">
+                        {project.title}
+                      </h3>
+                      {project.ratingAvg > 0 && (
+                        <span className="flex items-center gap-0.5 text-[11px] text-yellow-500 font-semibold flex-shrink-0">
+                          <span>★</span>{project.ratingAvg.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-400 truncate">{project.user?.name || '익명'}</p>
+                      <span className="text-[11px] text-gray-400 flex-shrink-0">{project._count.episodes}화</span>
                     </div>
                   </div>
                 </Link>

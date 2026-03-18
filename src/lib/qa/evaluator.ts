@@ -145,9 +145,32 @@ Be harsh and specific.`,
   if (content.type !== 'text') throw new Error('Unexpected response');
 
   const jsonMatch = content.text.match(/```json\n?([\s\S]*?)\n?```/);
-  const parsed = JSON.parse(jsonMatch ? jsonMatch[1] : content.text);
+  const jsonStr = jsonMatch ? jsonMatch[1] : content.text;
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    // JSON 파싱 실패 시 기본 점수 반환
+    console.warn('[QA] Claude 응답 파싱 실패, 기본 점수 사용');
+    return {
+      overall: 5, characterConsistency: 5, artStyle: 5,
+      noTextInImages: 5, speechBubbles: 5, storyFlow: 5,
+      backgroundQuality: 5, episodeContinuity: 5,
+      issues: ['QA 평가 응답 파싱 실패'], suggestions: [],
+    };
+  }
+
   return {
-    ...parsed,
-    episodeContinuity: parsed.episodeContinuity ?? parsed.storyFlow ?? 5,
-  } as QAScore;
+    overall: (parsed.overall as number) ?? 5,
+    characterConsistency: (parsed.characterConsistency as number) ?? 5,
+    artStyle: (parsed.artStyle as number) ?? 5,
+    noTextInImages: (parsed.noTextInImages as number) ?? 5,
+    speechBubbles: (parsed.speechBubbles as number) ?? 5,
+    storyFlow: (parsed.storyFlow as number) ?? 5,
+    backgroundQuality: (parsed.backgroundQuality as number) ?? 5,
+    episodeContinuity: (parsed.episodeContinuity as number) ?? (parsed.storyFlow as number) ?? 5,
+    issues: Array.isArray(parsed.issues) ? parsed.issues as string[] : [],
+    suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions as string[] : [],
+  };
 }

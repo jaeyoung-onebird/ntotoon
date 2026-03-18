@@ -9,6 +9,8 @@ import { rateLimit } from '@/lib/rate-limit';
 import { hasEnoughCredits } from '@/lib/credits';
 import { captureException } from '@/lib/error-reporter';
 
+export const maxDuration = 300; // 5분
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -43,10 +45,23 @@ export async function POST(
     }
 
     if (project.status === 'ANALYZING' || project.status === 'GENERATING') {
-      return NextResponse.json(
-        { error: 'Generation already in progress' },
-        { status: 409 }
-      );
+      // 10분 이상 진행 중이면 잠김 상태로 판단 → 리셋 허용
+      const stuckMinutes = (Date.now() - new Date(project.updatedAt).getTime()) / 60000;
+      if (stuckMinutes < 10) {
+        return NextResponse.json(
+          { error: 'Generation already in progress' },
+          { status: 409 }
+        );
+      }
+      // 잠긴 상태 해제: 기존 RUNNING 잡 정리
+      await prisma.job.updateMany({
+        where: { projectId: id, status: 'RUNNING' },
+        data: { status: 'FAILED', error: 'Timed out (stuck > 10min)', completedAt: new Date() },
+      });
+      await prisma.project.update({
+        where: { id },
+        data: { status: 'DRAFT' },
+      });
     }
 
     // Create job record

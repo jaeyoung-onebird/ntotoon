@@ -69,7 +69,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900">내 프로젝트</h1>
         <Link
-          href="/"
+          href="/create"
           className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
         >
           새 웹툰 만들기
@@ -79,7 +79,7 @@ export default function ProjectsPage() {
       {projects.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg mb-2">아직 프로젝트가 없습니다</p>
-          <Link href="/" className="text-blue-600 hover:underline">
+          <Link href="/create" className="text-blue-600 hover:underline">
             첫 번째 웹툰을 만들어보세요
           </Link>
         </div>

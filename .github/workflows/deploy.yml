@@ -1,0 +1,48 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ubuntu
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script_stop: true
+          timeout: 600s
+          script: |
+            set -e
+            APP_DIR="/home/ubuntu/ntotoon"
+            cd $APP_DIR
+
+            echo "=== git pull ==="
+            git pull origin main
+
+            echo "=== npm install ==="
+            npm install --production=false
+
+            echo "=== prisma migrate ==="
+            npx prisma migrate deploy
+
+            echo "=== next build ==="
+            npm run build
+
+            echo "=== pm2 reload ==="
+            pm2 reload ntotoon --update-env
+            pm2 reload ntotoon-worker --update-env
+
+            echo "=== health check ==="
+            sleep 3
+            curl -sf http://localhost:3000 > /dev/null && echo "✅ 배포 성공!" || (echo "❌ 헬스체크 실패"; exit 1)
