@@ -455,14 +455,21 @@ export default function EpisodePage({ params }: { params: Promise<{ id: string; 
           </div>
           {/* 메이킹 로그 */}
           {logs.length > 0 && (
-            <div className="bg-gray-900 rounded-lg p-3 max-h-36 overflow-y-auto">
+            <div className="bg-black rounded-lg p-3 max-h-40 overflow-y-auto border border-green-900/50" style={{ boxShadow: '0 0 15px rgba(0,255,0,0.05) inset' }}>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                <span className="text-[11px] text-gray-400 font-mono">Making Log</span>
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" style={{ boxShadow: '0 0 6px #22c55e' }} />
+                <span className="text-[10px] text-green-600 font-mono tracking-widest uppercase">System Log</span>
               </div>
               {logs.map((log, i) => (
-                <p key={i} className={`text-[11px] font-mono leading-relaxed ${i === logs.length - 1 ? 'text-green-400' : 'text-gray-500'}`}>
-                  {log}
+                <p
+                  key={i}
+                  className="text-[11px] font-mono leading-relaxed"
+                  style={{
+                    color: i === logs.length - 1 ? '#4ade80' : '#166534',
+                    textShadow: i === logs.length - 1 ? '0 0 8px rgba(74,222,128,0.6)' : 'none',
+                  }}
+                >
+                  {i === logs.length - 1 ? '▸ ' : '  '}{log}
                 </p>
               ))}
             </div>
