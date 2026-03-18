@@ -49,18 +49,9 @@ export async function getCredits(userId: string): Promise<number> {
   return user?.credits ?? 0;
 }
 
-// 생성 비용 계산 (크레딧 단위)
-// Gemini 3.1 Flash: $0.067/image, 2.5 Flash: $0.039/image
-// 1 credit = 100 KRW ≈ $0.073
-// Cost in credits = (dollar cost / 0.073) * markup
-export function estimateGenerationCost(panelCount: number, characterCount: number): number {
-  const charSheetCost = characterCount * config.credits.charSheetCostUSD;
-  const panelCost = panelCount * config.credits.panelCostUSD;
-  const claudeCost = config.credits.claudeCostUSD;
-  const totalDollar = charSheetCost + panelCost + claudeCost;
-  const totalKRW = totalDollar * config.credits.exchangeRate;
-  const credits = Math.ceil((totalKRW / config.credits.creditValueKRW) * config.credits.markup);
-  return credits;
+// 에피소드 1편 생성 = 고정 25C
+export function estimateGenerationCost(_panelCount: number, _characterCount: number): number {
+  return 25;
 }
 
 // 크레딧 충분 여부 사전 검증
