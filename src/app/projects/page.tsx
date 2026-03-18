@@ -99,6 +99,24 @@ export default function ProjectsPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
+                  {project.status === 'FAILED' && (
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const res = await fetch(`/api/projects/${project.id}/generate`, { method: 'POST' });
+                        if (res.ok) {
+                          const { jobId } = await res.json();
+                          window.location.href = `/projects/${project.id}/episodes/1?jobId=${jobId}`;
+                        } else {
+                          alert('재시도 실패');
+                        }
+                      }}
+                      className="px-3 py-1 text-xs font-medium text-blue-600 border border-blue-200 rounded-full hover:bg-blue-50 transition-colors"
+                    >
+                      재시도
+                    </button>
+                  )}
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[project.status] || 'bg-gray-100'}`}>
                     {statusLabels[project.status] || project.status}
                   </span>
