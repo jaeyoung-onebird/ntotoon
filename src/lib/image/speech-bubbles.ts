@@ -37,7 +37,9 @@ export async function addSpeechBubbles(
   imageBuffer: Buffer,
   dialogues: DialogueData[]
 ): Promise<Buffer> {
-  if (!dialogues || dialogues.length === 0) return imageBuffer;
+  // 빈 텍스트, undefined 필터링
+  const validDialogues = (dialogues || []).filter(d => d && d.text && d.text.trim().length > 0);
+  if (validDialogues.length === 0) return imageBuffer;
 
   const metadata = await sharp(imageBuffer).metadata();
   const W = metadata.width!;
@@ -49,8 +51,8 @@ export async function addSpeechBubbles(
 
   const placed: BubbleRect[] = [];
 
-  for (let i = 0; i < dialogues.length; i++) {
-    const d = dialogues[i];
+  for (let i = 0; i < validDialogues.length; i++) {
+    const d = validDialogues[i];
     const isNarration = d.type === 'narration';
     const isSfx = d.type === 'sfx';
     const isThought = d.type === 'thought';
