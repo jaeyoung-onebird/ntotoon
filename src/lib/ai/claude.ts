@@ -102,7 +102,9 @@ CRITICAL RULES FOR CHARACTER APPEARANCE:
 - Each character MUST have a FIXED visual tag string (English, comma-separated)
 - Example: "1boy, short black hair, dark brown eyes, white dress shirt, black slacks, age 28, tired eyes, slim build"
 - Copy-paste this EXACT string every time the character appears — NEVER paraphrase or vary
-- Clothing stays consistent unless explicitly changed in the story
+- CLOTHING IS CRITICAL: Read the source text carefully for clothing descriptions. If the text says "턱시도" → "black tuxedo suit, white dress shirt, bow tie". If it says "웨딩드레스" → "white wedding dress, veil, lace details". If it says "교복" → "Korean school uniform". NEVER default to pajamas or casual wear unless the story explicitly says so.
+- When the story describes a SCENE CHANGE (e.g., from ceremony to home), UPDATE the character appearance string with the new clothing for panels in that scene.
+- Clothing stays consistent WITHIN the same scene unless explicitly changed in the story
 - If a character is in "기존 캐릭터" list: copy their appearance string EXACTLY. Do NOT reinvent.
 - Only add NEW named characters to "characters" array. Background characters go in scene_description only.
 
