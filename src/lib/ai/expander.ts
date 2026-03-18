@@ -27,7 +27,7 @@ export async function expandText(
 - 출력은 소설 텍스트만. 제목, 설명, 메타 정보 없이.`;
 
   const response = await gemini.models.generateContent({
-    model: 'gemini-3.1-flash-lite',
+    model: 'gemini-3.1-flash-lite-preview',
     contents: [{ text: `${charContext}${prevContext}\n\n⚠️ 입력 텍스트가 매우 짧습니다. 스토리 의도를 유지하면서 웹툰 한 화 분량으로 대폭 확장해주세요.\n\n원본:\n${text}` }],
     config: { systemInstruction: systemPrompt, maxOutputTokens: 8192 },
   });

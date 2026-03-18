@@ -127,7 +127,7 @@ Respond ONLY in JSON:
 Be harsh and specific.`;
 
   const response = await gemini.models.generateContent({
-    model: 'gemini-3-flash',
+    model: 'gemini-3-flash-preview',
     contents: [...imageContents, { text: promptText }],
   });
 

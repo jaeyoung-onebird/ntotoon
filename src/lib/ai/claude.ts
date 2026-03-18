@@ -35,7 +35,7 @@ IMPORTANT: This is a CONTINUATION. The first panel must naturally follow from th
   }
 
   const response = await gemini.models.generateContent({
-    model: 'gemini-3.1-flash-lite',
+    model: 'gemini-3.1-flash-lite-preview',
     contents: [{ text: userMessage }],
     config: { systemInstruction: NOVEL_ANALYSIS_SYSTEM_PROMPT, maxOutputTokens: 16000 },
   });

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(taskkill:*)",
+      "Bash(npm run:*)",
+      "Bash(powershell -Command 'Stop-Process -Id 12716 -Force')",
+      "Bash(rm -rf .next/dev/lock)",
+      "Bash(PORT=3002 npm run dev:next)",
+      "WebSearch",
+      "WebFetch(domain:llamagen.ai)",
+      "Bash(source .env)",
+      "Bash(ssh:*)",
+      "Bash(chmod 600 \"C:/Users/Admin/Downloads/LightsailDefaultKey-ap-northeast-2 \\(2\\).pem\")",
+      "Bash(SSH_KEY=\"C:/Users/Admin/Downloads/LightsailDefaultKey-ap-northeast-2 \\(2\\).pem\")",
+      "Bash(SSH_KEY=\"C:/Users/Admin/Downloads/LightsailDefaultKey-ap-northeast-2 \\(2\\).pem\" ssh -i \"$SSH_KEY\" ubuntu@13.209.121.43 \"pm2 logs --lines 30 --nostream\")",
+      "Bash(SSH_KEY=\"C:/Users/Admin/Downloads/LightsailDefaultKey-ap-northeast-2 \\(2\\).pem\" ssh -i \"$SSH_KEY\" ubuntu@13.209.121.43 \"pm2 logs ntotoon --lines 50 --nostream\")",
+      "Bash(ssh -i \"$SSH_KEY\" ubuntu@13.209.121.43 'cd /home/ubuntu/ntotoon && node -e \"\":*)"
+    ]
+  }
+}

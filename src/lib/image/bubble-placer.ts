@@ -66,7 +66,7 @@ Respond ONLY in JSON array:
 \`\`\``;
 
     const response = await gemini.models.generateContent({
-      model: 'gemini-3.1-flash-lite',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: [
         { inlineData: { mimeType: 'image/jpeg', data: resized.toString('base64') } },
         { text: promptText },
