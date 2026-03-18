@@ -254,7 +254,7 @@ export async function runPipeline(
 
     // Step 3: Generate panels (3개씩 병렬 생성 - OpenAI rate limit 분당 5회)
     const panelRecords: Array<{ id: string; buffer: Buffer; dialogues: PanelData['dialogues'] }> = [];
-    const BATCH_SIZE = 2; // GPT-Image 분당 5회 제한 대응
+    const BATCH_SIZE = 4; // Gemini 분당 30회 — 병렬 4개씩
 
     // 스타일 레퍼런스 로드
     // 1순위: 작가가 직접 업로드한 커스텀 레퍼런스
